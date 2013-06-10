@@ -1,6 +1,6 @@
 ## UnParse ##
 
-A parser combinator library.
+A parser combinator library for Python.
  
 
 ### Contact information ###
