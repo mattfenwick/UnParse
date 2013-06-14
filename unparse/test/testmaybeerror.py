@@ -1,10 +1,13 @@
-from parse.maybeerror import MaybeError
+from .. import maybeerror
 import unittest as u
 
-m = MaybeError
+
+
+m = maybeerror.MaybeError
 
 def inc(x):
     return x + 1
+
 
 class Tests(u.TestCase):
 

@@ -1,6 +1,6 @@
-import parse.standard as s
-import parse.conslist as c
-import parse.maybeerror as me
+from .. import standard as s
+from .. import conslist as c
+from .. import maybeerror as me
 import unittest as u
 
 
