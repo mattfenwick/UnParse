@@ -38,16 +38,16 @@ class TestConsList(u.TestCase):
             except ValueError as e:
                 self.assertEqual('cannot get rest of empty sequence', e.message)
     
-    def testGetRest(self):
-        self.assertEqual([1,2,3,4], c1.getRest())
-        self.assertEqual([], c2.getRest())
-        self.assertEqual([8,4], c3.getRest())
-        self.assertEqual([], c4.getRest())
-        self.assertEqual([], c5.getRest())
+    def testGetAsList(self):
+        self.assertEqual([1,2,3,4], c1.getAsList())
+        self.assertEqual([], c2.getAsList())
+        self.assertEqual([8,4], c3.getAsList())
+        self.assertEqual([], c4.getAsList())
+        self.assertEqual([], c5.getAsList())
     
     def testFromIterable(self):
         myC = C.fromIterable(range(8))
-        self.assertEqual(range(8), myC.getRest())
+        self.assertEqual(range(8), myC.getAsList())
         self.assertEqual(myC, C(range(-1, 8), 1))
     
     def testEquality(self):

@@ -31,9 +31,6 @@ class ConsList(object):
             return ConsList(self.seq, self.start + 1)
         raise ValueError('cannot get rest of empty sequence')
     
-    def getRest(self):
-        return self.getAsList()
-    
     def getAsList(self):
         '''
         Return list of remaining elements.
@@ -46,7 +43,7 @@ class ConsList(object):
         
     def __eq__(self, other):
         try:
-            return self.seq[self.start:] == other.seq[other.start:]
+            return self.getAsList() == other.getAsList()
         except:
             return False
     
