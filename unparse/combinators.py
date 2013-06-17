@@ -176,6 +176,7 @@ def parserFactory(Type):
             return Parser(f)
 
 
+    # defined outside the class b/c they're constants
     Parser.zero = Parser(lambda xs, s: Type.zero)
 
     def f_item(xs, s):

@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='UnParse',
-    version='0.0.1',
+    version='0.0.2',
     packages=['unparse'],
     license='MIT',
     author='Matt Fenwick',
