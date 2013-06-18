@@ -1,6 +1,53 @@
 ## UnParse ##
 
-A parser combinator library for Python.
+Another parser combinator library for Python?  Don't we have enough of those already???
+
+That depends on what we want out of a parser library.  My preferences are:
+
+ - simple and clear definition of the parse model:
+   - inputs
+   - outputs
+   - backtracking
+   - (non)-deterministic 
+   - prioritized choice
+ 
+ - no magic.  Magic operators are often convenient, but it's more important -- 
+   and useful in the long run -- to be able to easily implement the magic in
+   terms of the model.
+
+ - doesn't hide important details -- but also doesn't force you to worry about
+   them unless you need to.
+
+ - provides not just complex parsers, but also the primitive.  What are the most 
+   basic parsers, out of which bigger ones are built?  
+ 
+ - building parsers is all about composition.  This means there needs to be
+   powerful operations for combining parsers, such as sequencing, monadic 
+   sequencing, choice, and repetition.
+ 
+ - doesn't treat lexing as a special case.  Lexing is no different from any
+   other kind of parsing, except for the complexity of the language (sometimes).
+
+ - compositional semantics.  Parser behavior should be consistent -- it must not
+   depend on what context the parser is in.
+ 
+ - works with the language, not against it.  Parsers should be able to take 
+   advantage of a language's features and capabilities for abstraction -- 
+   including functions and objects.  This means that it's easy to create new
+   parsers, as well as combinators, using the language's facilities.
+
+ - the result value of a successful parser is important.  I want full control
+   over what value is generated.  I don't want a default parse tree crammed with
+   tons of useless junk.  I don't want a mess of nested tuples.  Generating the
+   result should be clean and simple.
+
+ - errors are a key aspect of useful parsers.  How and when are they created,
+   and with what information (position, message explaining the reason)?  Once
+   an error is created, how is it propagated?  How do errors interact with the
+   parse model -- backtracking -- and with parser composition?
+
+These are the issues that UnParse addresses and that differentiate it from
+other parser libraries.  Read on for more information!
  
 
 ## Overview ##
@@ -36,8 +83,6 @@ UnParse avoids magic -- the kind of magic that makes it easy to do really simple
 things, but hard to deal with actual real-world problems in a clean, sane way.
 This allows UnParse to stay simple and focused -- and you don't need to worry 
 about it mucking with things behind your back -- and free of arbitrary restrictions.
-
-Enjoy!
 
 
 ## API ##
