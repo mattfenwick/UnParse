@@ -53,5 +53,5 @@ class ConsList(object):
     def __repr__(self):
         return repr({
             'type': 'cons list', 
-            'sequence': self.getRest()
+            'sequence': self.getAsList()
         })
