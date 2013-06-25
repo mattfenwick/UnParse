@@ -110,7 +110,9 @@ special.parse = Parser.app(lambda _1, fs, _2: fs,
                            form.many0(),
                            cut('special form: missing }', tok(cc))).parse
 
-woof = junk.seq2R(form.many0())
+end = item.not0()
+
+woof = junk.seq2R(form.many0()).seq2L(cut('woof: unparsed input remaining', end))
 
 
 def parse(parser, inp):
