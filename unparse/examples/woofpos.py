@@ -94,21 +94,27 @@ special = Parser.error('unimplemented -- special')
 
 form = Parser.any([tok(symbol), tok(number), app, wlist, special])
 
-app.parse = Parser.app(lambda _1, op, args, _2: (op, args),
-                       tok(op),
-                       cut('application: missing operator', form),
-                       form.many0(),
-                       cut('application: missing )', tok(cp))).parse
 
-wlist.parse = Parser.app(lambda _1, vs, _2: vs,
-                         tok(os),
-                         form.many0(),
-                         cut('list: missing ]', tok(cs))).parse
+def between(opener, body, closer, message):
+    return Parser.app(lambda _1, b, _2: b, 
+                      opener,
+                      body.plus(closer.not1().seq2L(cut('delimited: invalid content', Parser.zero))).many0(),
+                      cut(message, closer))
+    
+app.parse = between(tok(op), 
+                    form, 
+                    tok(cp),
+                    'application: missing )').parse
 
-special.parse = Parser.app(lambda _1, fs, _2: fs,
-                           tok(oc),
-                           form.many0(),
-                           cut('special form: missing }', tok(cc))).parse
+wlist.parse = between(tok(os),
+                      form,
+                      tok(cs),
+                      'list: missing ]').parse
+
+special.parse = between(tok(oc),
+                        form, 
+                        tok(cc),
+                        'special form: missing }').parse
 
 end = item.not0()
 
