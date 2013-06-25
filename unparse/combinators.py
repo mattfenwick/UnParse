@@ -195,14 +195,12 @@ def parserFactory(Type):
                 state, tokens = s, xs
                 for p in parsers:
                     r = p.parse(tokens, state)
-                    if r.status == 'error':
-                        return r
-                    elif r.status == 'success':
+                    if r.status == 'success':
                         vals.append(r.value['result'])
                         state = r.value['state']
                         tokens = r.value['rest']
                     else:
-                        return Type.zero
+                        return r
                 return good(vals, tokens, state)
             return Parser(f)
 
