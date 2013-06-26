@@ -43,6 +43,17 @@ class TestParser(u.TestCase):
         v1 = p.error('uh-oh').parse('abc', 123)
         self.assertEqual(m.error('uh-oh'), v1)
     
+    def testCatchError(self):
+        f1 = lambda e: p.pure(3)
+        f2 = lambda e: p.error('dead again')
+        # error -> good -- resumes parsing with tokens and state from before the error occurred
+        self.assertEqual(good('123', [2,4], 3), p.error('dead 1').catchError(f1).parse('123', [2, 4]))
+        # good -> good (unaffected by this combinator)
+        self.assertEqual(good('123', [2,4], 18), p.pure(18).catchError(f1).parse('123', [2,4]))
+        # error -> error
+        self.assertEqual(m.error('dead again'), p.error('dead 1').catchError(f2).parse('123', [2,4]))
+        # good -> error is not possible with this combinator
+        
     def testMapError(self):
         f = len
         v1 = p.error('abcdef').mapError(f).parse('123abc', None)
@@ -123,6 +134,12 @@ class TestParser(u.TestCase):
         self.assertEqual(val.parse(l([2,4,5]), {}), m.zero)
         self.assertEqual(val.parse(l([2,3,4]), {}), good(l([4]), {}, 2))
     
+    def testLookahead(self):
+        parser = p.literal(2).seq2L(p.literal(3).lookahead())
+        self.assertEqual(good(l([3,4,5]), None, 2), parser.parse(l([2,3,4,5]), None))
+        self.assertEqual(m.zero, parser.parse(l([2,4,5]), None))
+        self.assertEqual(m.zero, parser.parse(l([3,4,5]), None))
+    
     def testNot0(self):
         val = p.literal(2).not0()
         self.assertEqual(val.parse(l([2,3,4]), {}), m.zero)
@@ -165,4 +182,11 @@ class TestParser(u.TestCase):
     
     def testGetState(self):
         self.assertEqual(good('abc', 123, 123), p.getState.parse('abc', 123))
+
+
+
+class TestCountParser(u.TestCase):
+    
+    def testMePlease(self):
+        self.assertTrue(False)
     

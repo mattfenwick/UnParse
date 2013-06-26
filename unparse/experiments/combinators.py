@@ -1,21 +1,20 @@
-from .maybeerror import MaybeError as M
 
-
-
-def result(value, rest, state):
-    return {'result': value, 'rest': rest, 'state': state}
-
-def good(value, rest, state):
-    return M.pure(result(value, rest, state))
-
-
-def parserFactory(item):
+def parserFactory(Type):
     '''
-    in:  ([t] -> s -> ME e ([t], s, a)) -> Parser class
-    
-    the `item` parameter is the primitive which 
-    consumes a single token from the input
+    in: a class `m` which implements:
+      - pure      ::  a -> m a
+      - fmap      ::  m a -> (a -> b) -> m b
+      - plus      ::  m a -> m a -> m a
+      - error     ::  e -> m a
+      - zero      ::  m a
+      - mapError  ::  m a -> (e -> e) -> m a
     '''
+
+    def result(value, rest, state):
+        return {'result': value, 'rest': rest, 'state': state}
+
+    def good(value, rest, state):
+        return Type.pure(result(value, rest, state))
 
     class Parser(object):
         '''
@@ -95,19 +94,8 @@ def parserFactory(item):
             e -> Parser e s (m t) a
             '''
             def f(xs, s):
-                return M.error(e)
+                return Type.error(e)
             return Parser(f)
-        
-        def catchError(self, f):
-            '''
-            Parser e s (m t) a -> (e -> Parser e s (m t) a) -> Parser e s (m t) a
-            '''
-            def g(xs, s):
-                v = self.parse(xs, s)
-                if v.status == 'error':
-                    return f(v.value).parse(xs, s)
-                return v
-            return Parser(g)
 
         def mapError(self, g):
             '''
@@ -154,7 +142,7 @@ def parserFactory(item):
                     return r
                 elif p(r.value['result']):
                     return r
-                return M.zero
+                return Type.zero
             return Parser(f)
 
         @staticmethod
@@ -244,12 +232,6 @@ def parserFactory(item):
             def g(x):
                 return x[1]
             return Parser.all([self, other]).fmap(g)
-        
-        def lookahead(self):
-            '''
-            Parser e s (m t) a -> Parser e s (m t) None
-            '''
-            return Parser.get.bind(lambda xs: self.seq2R(Parser.put(xs)))
 
         def not0(self):
             '''
@@ -260,7 +242,7 @@ def parserFactory(item):
                 if r.status == 'error':
                     return r
                 elif r.status == 'success':
-                    return M.zero
+                    return Type.zero
                 else:
                     return good(None, xs, s)
             return Parser(f)
@@ -291,7 +273,7 @@ def parserFactory(item):
             [Parser e s (m t) a] -> Parser e s (m t) a
             '''
             def f(xs, s):
-                r = M.zero
+                r = Type.zero
                 for p in parsers:
                     r = p.parse(xs, s)
                     if r.status in ['success', 'error']:
@@ -303,17 +285,22 @@ def parserFactory(item):
     # defined outside the class b/c they're constants
 
     # Parser e s (m t) a
-    Parser.zero = Parser(lambda xs, s: M.zero)
+    Parser.zero = Parser(lambda xs, s: Type.zero)
+
+    def f_item(xs, s):
+        if xs.isEmpty():
+            return Type.zero
+        first, rest = xs.first(), xs.rest()
+        return good(first, rest, s)
 
     # Parser e s (m t) t
-    Parser.item = Parser(item)
+    Parser.item = Parser(f_item)
 
     def f_get(xs, s):
         return good(xs, xs, s)
 
     # Parser e s (m t) (m t)
     Parser.get = Parser(f_get)
-
 
     def f_getState(xs, s):
         return good(s, xs, s)
@@ -323,34 +310,3 @@ def parserFactory(item):
 
 
     return Parser
-
-
-def itemBasic(xs, s):
-    '''
-    Simply consumes a single token if one is available, presenting that token
-    as the value.  Fails if token stream is empty.
-    '''
-    if xs.isEmpty():
-        return M.zero
-    first, rest = xs.first(), xs.rest()
-    return good(first, rest, s)
-
-
-def _bump(c, p):
-    line, col = p
-    if c == '\n':
-        return (line + 1, 1)
-    return (line, col + 1)
-
-def itemPosition(xs, position):
-    '''
-    Does two things:
-     - consumes a single token if available, failing otherwise (see `itemBasic`)
-     - updates the position info in state -- `\n` is a newline
-     
-    This assumes that the state is a 2-tuple of integers, (line, column).
-    '''
-    if xs.isEmpty():
-        return M.zero
-    first, rest = xs.first(), xs.rest()
-    return good(first, rest, _bump(first, position))

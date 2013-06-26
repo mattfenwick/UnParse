@@ -1,5 +1,7 @@
-from .maybeerror import MaybeError
-from .combinators import parserFactory
+from .combinators import parserFactory, itemBasic, itemPosition
 
 
-Parser = parserFactory(MaybeError)
+
+Parser = parserFactory(itemBasic)
+
+CountParser = parserFactory(itemPosition)
