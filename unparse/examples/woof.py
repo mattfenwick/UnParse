@@ -33,43 +33,59 @@
 #   - recursive grammar (must work around Python's non-let-rec binding)
 #   - concrete parse tree construction
 
-from ..standard import Parser
+from .. import combinators as c
+from .. import conslist
+
+(literal, satisfy, not1, _) = c.tokenBasic
 
 
-comment = Parser.literal(';').seq2R(Parser.literal('\n').not1().many0())
+comment = c.seq2R(literal(';'), c.many0(not1(literal('\n'))))
 
 WHITESPACE = set(' \t\n\r\f')
-whitespace = Parser.satisfy(lambda x: x in WHITESPACE)
+whitespace = satisfy(lambda x: x in WHITESPACE)
 
-junk = comment.plus(whitespace)
+junk = c.plus(comment, whitespace)
 
 def tok(p):
-    return p.seq2L(junk.many0())
+    return c.seq2L(p, c.many0(junk))
 
 DIGITS = set('0123456789')
-number = Parser.satisfy(lambda x: x in DIGITS).many1()
+number = c.many1(satisfy(lambda x: x in DIGITS))
 
 SYMBOLSTART = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_')
-symbol = Parser.app(lambda x, y: [x] + y,
-                    Parser.satisfy(lambda x: x in SYMBOLSTART),
-                    Parser.satisfy(lambda x: x in SYMBOLSTART.union(DIGITS)).many0())
+symbol = c.app(lambda x, y: [x] + y,
+                    satisfy(lambda x: x in SYMBOLSTART),
+                    c.many0(satisfy(lambda x: x in SYMBOLSTART.union(DIGITS))))
 
-op = Parser.literal('(')
-cp = Parser.literal(')')
-os = Parser.literal('[')
-cs = Parser.literal(']')
-oc = Parser.literal('{')
-cc = Parser.literal('}')
+op = literal('(')
+cp = literal(')')
+os = literal('[')
+cs = literal(']')
+oc = literal('{')
+cc = literal('}')
 
 
-app = Parser.error('unimplemented -- app')
-wlist = Parser.error('unimplemented -- list')
-special = Parser.error('unimplemented -- special')
+app = c.error('unimplemented -- app')
+wlist = c.error('unimplemented -- list')
+special = c.error('unimplemented -- special')
 
-form = Parser.any([tok(symbol), tok(number), app, wlist, special])
+form = c.any_([tok(symbol), tok(number), app, wlist, special])
 
-app.parse = tok(op).seq2R(form.many1()).seq2L(tok(cp)).parse
+app.parse = c.app(lambda _1, b, _2: b,
+                  tok(op),
+                  c.many1(form),
+                  tok(cp)).parse
 
-wlist.parse = tok(os).seq2R(form.many0()).seq2L(tok(cs)).parse
+wlist.parse = c.app(lambda _1, b, _2: b,
+                    tok(os),
+                    c.many0(form),
+                    tok(cs)).parse
 
-special.parse = tok(oc).seq2R(form.many0()).seq2L(tok(cc)).parse
+special.parse = c.app(lambda _1, b, _2: b,
+                      tok(oc),
+                      c.many0(form),
+                      tok(cc)).parse
+
+
+def runParser(parser, inp):
+    return parser.parse(conslist.ConsList(inp, 0), None)

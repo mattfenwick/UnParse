@@ -33,50 +33,29 @@
 #   - recursive grammar (must work around Python's non-let-rec binding)
 #   - concrete parse tree construction
 
-from ..standard import Parser
-from ..conslist import ConsList
+from .. import combinators as c
+from .. import conslist
+
+item = c.itemPosition
+(literal, satisfy, not1, _) = c.tokenPosition
 
 
-def parsers(item):
-    mySatisfy = item.check
-    def myLiteral(t):
-        return mySatisfy(lambda x: x == t)
-    def myNot1(p):
-        return p.not0().seq2R(item)
-    return (mySatisfy, myLiteral, myNot1)
-
-
-def bump(x):
-    def action(y): # what's this syntax called:  def x((a, b)): ... ????
-        line, col = y
-        if x == '\n':
-            return (line + 1, 1)
-        return (line, col + 1)
-    return Parser.updateState(action).seq2R(Parser.pure(x))
-
-item = Parser.item.bind(bump)
-
-satisfy, literal, not1 = parsers(item)
-
-# another issue caused by this problem of needing to redefine the basic item
-#   parser:  not1 has changed from a method call to a "free" function
-comment = literal(';').seq2R(not1(literal('\n')).many0())
+comment = c.seq2R(literal(';'), c.many0(not1(literal('\n'))))
 
 WHITESPACE = set(' \t\n\r\f')
 whitespace = satisfy(lambda x: x in WHITESPACE)
 
-junk = comment.plus(whitespace).many0()
+junk = c.many0(c.plus(comment, whitespace))
 
-def tok(p):
-    return p.seq2L(junk)
 
 DIGITS = set('0123456789')
-number = satisfy(lambda x: x in DIGITS).many1().fmap(lambda ds: int(''.join(ds)))
+number = c.fmap(lambda ds: int(''.join(ds)), c.many1(satisfy(lambda x: x in DIGITS)))
 
 SYMBOLSTART = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_')
-symbol = Parser.app(lambda x, y: ''.join([x] + y),
+symbol = c.app(lambda x, y: ''.join([x] + y),
                     satisfy(lambda x: x in SYMBOLSTART),
-                    satisfy(lambda x: x in SYMBOLSTART.union(DIGITS)).many0())
+                    c.many0(satisfy(lambda x: x in SYMBOLSTART.union(DIGITS))))
+
 
 op = literal('(')
 cp = literal(')')
@@ -85,21 +64,25 @@ cs = literal(']')
 oc = literal('{')
 cc = literal('}')
 
+
+def tok(p):
+    return c.seq2L(p, junk)
+
 def cut(message, parser):
-    return Parser.getState.bind(lambda p: parser.commit((message, p)))
+    return c.bind(c.getState, lambda p: c.commit(parser, (message, p)))
 
-app = Parser.error('unimplemented -- app')
-wlist = Parser.error('unimplemented -- list')
-special = Parser.error('unimplemented -- special')
+app = c.error('unimplemented -- app')
+wlist = c.error('unimplemented -- list')
+special = c.error('unimplemented -- special')
 
-form = Parser.any([tok(symbol), tok(number), app, wlist, special])
+form = c.any_([tok(symbol), tok(number), app, wlist, special])
 
 
 def between(opener, body, closer, message):
-    return Parser.app(lambda _1, b, _2: b, 
-                      opener,
-                      body.plus(closer.not1().seq2L(cut('delimited: invalid content', Parser.zero))).many0(),
-                      cut(message, closer))
+    return c.app(lambda _1, bs, _2: bs, 
+                 opener,
+                 c.many0(c.plus(body, c.seq2L(not1(closer), cut('delimited: invalid content', c.zero)))),
+                 cut(message, closer))
     
 app.parse = between(tok(op), 
                     form, 
@@ -116,10 +99,13 @@ special.parse = between(tok(oc),
                         tok(cc),
                         'special form: missing }').parse
 
-end = item.not0()
+end = c.not0(item)
 
-woof = junk.seq2R(form.many0()).seq2L(cut('woof: unparsed input remaining', end))
+woof = c.app(lambda _1, fs, _2: fs, 
+             junk,
+             c.many0(form),
+             cut('woof: unparsed input remaining', end))
 
 
-def parse(parser, inp):
-    return parser.parse(ConsList(inp, 0), (1, 1))
+def runParser(parser, inp):
+    return parser.parse(conslist.ConsList(inp, 0), (1, 1))

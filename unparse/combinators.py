@@ -291,6 +291,7 @@ def _itemBasic(xs, s):
     return good(first, rest, s)
 
 itemBasic = Parser(_itemBasic)
+tokenBasic = tokenPrimitives(itemBasic)
 
 
 def _bump(c, p):
@@ -313,3 +314,4 @@ def _itemPosition(xs, position):
     return good(first, rest, _bump(first, position))
 
 itemPosition = Parser(_itemPosition)
+tokenPosition = tokenPrimitives(itemPosition)
