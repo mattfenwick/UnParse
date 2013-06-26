@@ -187,6 +187,14 @@ class TestParser(u.TestCase):
 
 class TestCountParser(u.TestCase):
     
-    def testMePlease(self):
-        self.assertTrue(False)
+    def testItem(self):
+        parser = s.CountParser.item
+        self.assertEqual(good(l('bcd'), (1, 2), 'a'), parser.parse(l('abcd'), (1, 1)))
+        self.assertEqual(good(l('bcd'), (2, 1), '\n'), parser.parse(l('\nbcd'), (1, 1)))
+    
+    def testLiteral(self):
+        parser = s.CountParser.literal('3').plus(s.CountParser.literal('4'))
+        self.assertEqual(good(l('456'), (1, 2), '3'), parser.parse(l('3456'), (1, 1)))
+        self.assertEqual(good(l('56'), (1, 2), '4'), parser.parse(l('456'), (1, 1)))
+        self.assertEqual(m.zero, parser.parse(l('56'), (1, 1)))
     
