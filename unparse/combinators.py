@@ -69,7 +69,7 @@ def error(e):
         return M.error(e)
     return Parser(f)
 
-def catchError(parser, f):
+def catchError(f, parser):
     '''
     Parser e s (m t) a -> (e -> Parser e s (m t) a) -> Parser e s (m t) a
     '''
@@ -80,11 +80,11 @@ def catchError(parser, f):
         return v
     return Parser(g)
 
-def mapError(parser, f):
+def mapError(f, parser):
     '''
     Parser e s (m t) a -> (e -> e) -> Parser e s (m t) a
     '''
-    return catchError(parser, compose(error, f))
+    return catchError(compose(error, f), parser)
 
 def put(xs):
     '''
@@ -173,7 +173,7 @@ def app(f, *parsers):
     '''
     return fmap(lambda rs: f(*rs), all_(parsers))
 
-def optional(parser, x):
+def optional(x, parser):
     '''
     Parser e s (m t) a -> a -> Parser e s (m t) a
     '''
@@ -215,7 +215,7 @@ def not0(parser):
             return good(None, xs, s)
     return Parser(f)
 
-def commit(parser, e):
+def commit(e, parser):
     '''
     Parser e s (m t) a -> e -> Parser e s (m t) a
     '''

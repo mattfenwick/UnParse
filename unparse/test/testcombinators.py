@@ -123,20 +123,20 @@ class TestParser(u.TestCase):
         f1 = lambda e: c.pure(3)
         f2 = lambda e: c.error('dead again')
         # error -> good -- resumes parsing with tokens and state from before the error occurred
-        self.assertEqual(good('123', [2,4], 3), c.catchError(c.error('dead 1'), f1).parse('123', [2, 4]))
+        self.assertEqual(good('123', [2,4], 3), c.catchError(f1, c.error('dead 1')).parse('123', [2, 4]))
         # good -> good (unaffected by this combinator)
-        self.assertEqual(good('123', [2,4], 18), c.catchError(c.pure(18), f1).parse('123', [2,4]))
+        self.assertEqual(good('123', [2,4], 18), c.catchError(f1, c.pure(18)).parse('123', [2,4]))
         # error -> error
-        self.assertEqual(m.error('dead again'), c.catchError(c.error('dead 1'), f2).parse('123', [2,4]))
+        self.assertEqual(m.error('dead again'), c.catchError(f2, c.error('dead 1')).parse('123', [2,4]))
         # good -> error is not possible with this combinator
         
     def testMapError(self):
         f = len
-        v1 = c.mapError(c.error('abcdef'), f).parse('123abc', None)
+        v1 = c.mapError(f, c.error('abcdef')).parse('123abc', None)
         self.assertEqual(m.error(6), v1)
-        v2 = c.mapError(c.zero, f).parse('123abc', None)
+        v2 = c.mapError(f, c.zero).parse('123abc', None)
         self.assertEqual(m.zero, v2)
-        v3 = c.mapError(c.pure(82), f).parse('123abc', None)
+        v3 = c.mapError(f, c.pure(82)).parse('123abc', None)
         self.assertEqual(good('123abc', None, 82), v3)        
 
     def testPut(self):
@@ -181,7 +181,7 @@ class TestParser(u.TestCase):
         self.assertEqual(m.zero, v3)
     
     def testOptional(self):
-        parser = c.optional(lit1(3), 'blargh')
+        parser = c.optional('blargh', lit1(3))
         v1 = parser.parse(l([1,2,3]), 'hi')
         self.assertEqual(good(l([1,2,3]), 'hi', 'blargh'), v1)
         v2 = parser.parse(l([3,2,1]), 'bye')
@@ -211,7 +211,7 @@ class TestParser(u.TestCase):
         self.assertEqual(val.parse(l([3,4,5]), {}), good(l([3,4,5]), {}, None))
     
     def testCommit(self):
-        val = c.commit(lit1(2), 'bag-agg')
+        val = c.commit('bag-agg', lit1(2))
         self.assertEqual(val.parse(l([2,3,4]), 'hi'), good(l([3,4]), 'hi', 2))
         self.assertEqual(val.parse(l([3,4,5]), 'hi'), m.error('bag-agg'))
     
