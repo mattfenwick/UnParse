@@ -89,39 +89,47 @@ about it mucking with things behind your back -- and free of arbitrary restricti
 
  - `Parser` -- parameterized by an underlying result type
  
-   1. static methods/values
+   1. constants
+   
+     - `zero`
+     
+     - `get`
+     
+     - `getState`
+     
+     - `itemBasic`
+     
+     - `itemPosition`
+   
+   2. value to parser
    
      - `pure`
      
      - `error`
      
-     - `zero`
-     
-     - `item`
-     
      - `app`
-     
-     - `satisfy`
      
      - `all`
      
-     - `literal`
-     
-     - `string`
-     
      - `put`
      
-     - `get`
-     
      - `putState`
-     
-     - `getState`
      
      - `updateState`
      
      - `any`
    
-   2. instance methods
+   3. parameterizable by choice of `item`
+     
+     - `literal`
+     
+     - `string`
+     
+     - `satisfy`
+     
+     - `not1`
+   
+   4. parser to parser
    
      - `fmap`
      
@@ -130,6 +138,10 @@ about it mucking with things behind your back -- and free of arbitrary restricti
      - `plus`
      
      - `mapError`
+     
+     - `catchError`
+     
+     - `lookahead`
      
      - `check`
      
@@ -144,8 +156,6 @@ about it mucking with things behind your back -- and free of arbitrary restricti
      - `seq2R`
      
      - `not0`
-     
-     - `not1`
 
      - `commit`
      
