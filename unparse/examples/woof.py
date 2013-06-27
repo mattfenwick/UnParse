@@ -34,7 +34,7 @@
 #   - concrete parse tree construction
 
 from .. import combinators as c
-from .. import conslist
+
 
 (literal, satisfy, not1, _) = c.tokenBasic
 
@@ -85,7 +85,3 @@ special.parse = c.app(lambda _1, b, _2: b,
                       tok(oc),
                       c.many0(form),
                       tok(cc)).parse
-
-
-def runParser(parser, inp):
-    return parser.parse(conslist.ConsList(inp, 0), None)

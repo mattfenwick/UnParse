@@ -2,7 +2,6 @@
 @author: matt
 '''
 from .. import combinators as c
-from .. import conslist
 from . import concrete
 
 
@@ -16,7 +15,8 @@ def oneOf(cs):
     return satisfy(lambda x: x in cs)
 
 def cut(message, parser):
-    return c.bind(c.getState, lambda p: c.commit(parser, (message, p)))
+    return c.bind(c.getState, 
+                  lambda p: c.commit([(message, p)], parser))
 
 
 NEWLINES, BLANKS = set('\n\r'), set(' \t')
@@ -70,7 +70,11 @@ whitespace = c.app(concrete.Whitespace,
 
 junk = c.many0(c.plus(whitespace, comment))
 
-
+def addError(e, parser):
+    return c.seq2R(junk,  # <-- HAAACK !!! this is just to throw away whitespace/comments in order to report a good position
+                   c.bind(c.getState,
+                          lambda pos: c.mapError(lambda es: [(e, pos)] + es, parser)))
+    
 endsc = c.seq2R(newline, sc)
 
 def scRest(ws):
@@ -96,13 +100,13 @@ def classify(meta, theString): # 'theString' in order to avoid shadowing
     '''
     Reserved = concrete.Reserved
     if theString.lower() == "stop_":
-        return Reserved(meta, "stop", '')
+        return Reserved(meta, "stop", None)
     elif theString[:5].lower() == "save_":
         if len(theString) != 5:
             return Reserved(meta, "saveopen", theString[5:])
-        return Reserved(meta, "saveclose", '')
+        return Reserved(meta, "saveclose", None)
     elif theString.lower() == "loop_":
-        return Reserved(meta, "loop", '')
+        return Reserved(meta, "loop", None)
     elif theString[:5].lower() == "data_" and len(theString) > 5:
         return Reserved(meta, "dataopen", theString[5:])
     return concrete.Value(meta, theString)
@@ -130,27 +134,31 @@ def keyword(rtype):
     return c.check(lambda val: isinstance(val, concrete.Reserved) and val.rtype == rtype, 
                    uqvalue_or_keyword)
 
-loop = c.app(concrete.Loop,
-             keyword('loop'),
-             c.many0(identifier),
-             c.many0(value),
-             cut('loop: missing close', keyword('stop')))
+loop = addError('loop', 
+                c.app(concrete.Loop,
+                      keyword('loop'),
+                      c.many0(identifier),
+                      c.many0(value),
+                      cut('loop: missing close', keyword('stop'))))
 
-datum = c.app(concrete.Datum,
-              identifier, 
-              cut('datum: missing value', value))
+datum = addError('datum',
+                 c.app(concrete.Datum,
+                       identifier, 
+                       cut('datum: missing value', value)))
 
-save = c.app(concrete.Save,
-             keyword('saveopen'),
-             c.many0(datum),
-             c.many0(loop),
-             cut('save: missing close', keyword('saveclose')))
+save = addError('save',
+                c.app(concrete.Save,
+                      keyword('saveopen'),
+                      c.many0(datum),
+                      c.many0(loop),
+                      cut('save: missing close', keyword('saveclose'))))
 
-data = c.app(concrete.Data,
-             keyword('dataopen'),
-             c.many0(save))
+data = addError('data', 
+                c.app(concrete.Data,
+                      keyword('dataopen'),
+                      c.many0(save)))
 
 end = c.not0(item)
 
-nmrstar = c.seq2L(c.commit(data, 'data: unable to parse'), 
+nmrstar = c.seq2L(cut('data: unable to parse', data), 
                   munch(cut('unparsed input remaining', end)))

@@ -32,9 +32,11 @@
 #   - discarding any whitespace and comments without a separate lexing pass
 #   - recursive grammar (must work around Python's non-let-rec binding)
 #   - concrete parse tree construction
+#   - position tracking (line/column)
+#   - error reporting -- stack of errors
 
 from .. import combinators as c
-from .. import conslist
+
 
 item = c.itemPosition
 (literal, satisfy, not1, _) = c.tokenPosition
@@ -46,7 +48,6 @@ WHITESPACE = set(' \t\n\r\f')
 whitespace = satisfy(lambda x: x in WHITESPACE)
 
 junk = c.many0(c.plus(comment, whitespace))
-
 
 DIGITS = set('0123456789')
 number = c.fmap(lambda ds: int(''.join(ds)), c.many1(satisfy(lambda x: x in DIGITS)))
@@ -65,11 +66,16 @@ oc = literal('{')
 cc = literal('}')
 
 
-def tok(p):
-    return c.seq2L(p, junk)
+def tok(parser):
+    return c.seq2L(parser, junk)
 
 def cut(message, parser):
-    return c.bind(c.getState, lambda p: c.commit(parser, (message, p)))
+    return c.bind(c.getState, lambda p: c.commit([(message, p)], parser))
+
+def addError(e, parser):
+    return c.bind(c.getState,
+                  lambda pos: c.mapError(lambda es: [(e, pos)] + es, parser))
+
 
 app = c.error('unimplemented -- app')
 wlist = c.error('unimplemented -- list')
@@ -84,20 +90,23 @@ def between(opener, body, closer, message):
                  c.many0(c.plus(body, c.seq2L(not1(closer), cut('delimited: invalid content', c.zero)))),
                  cut(message, closer))
     
-app.parse = between(tok(op), 
-                    form, 
-                    tok(cp),
-                    'application: missing )').parse
+app.parse = addError('application',
+                     between(tok(op), 
+                             form, 
+                             tok(cp),
+                             'missing )')).parse
 
-wlist.parse = between(tok(os),
-                      form,
-                      tok(cs),
-                      'list: missing ]').parse
+wlist.parse = addError('list', 
+                       between(tok(os),
+                               form,
+                               tok(cs),
+                               'missing ]')).parse
 
-special.parse = between(tok(oc),
-                        form, 
-                        tok(cc),
-                        'special form: missing }').parse
+special.parse = addError('special form',
+                         between(tok(oc),
+                                 form, 
+                                 tok(cc),
+                                 'missing }')).parse
 
 end = c.not0(item)
 
@@ -105,7 +114,3 @@ woof = c.app(lambda _1, fs, _2: fs,
              junk,
              c.many0(form),
              cut('woof: unparsed input remaining', end))
-
-
-def runParser(parser, inp):
-    return parser.parse(conslist.ConsList(inp, 0), (1, 1))
