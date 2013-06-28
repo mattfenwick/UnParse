@@ -1,9 +1,10 @@
 #
 # Value   :=  'false'  |  'null'  |  'true'  |  Object  |  Array  |  Number  |  String
 # 
-# Object  :=  '{'  sepBy0(',', String  ':'  Value )  '}'
+# Object  :=  '{'  sepBy0(pair, ',')  '}'
+#   where pair  :=  String  ':'  Value
 # 
-# Array   :=  '['  sepBy0(',', Value)  ']'
+# Array   :=  '['  sepBy0(Value, ',')  ']'
 # 
 # Number  :=  '-'(?)  body  frac(?)  exponent(?)
 #   where body   :=  '0'  |  ( [1-9]  [0-9](*) )
@@ -132,5 +133,5 @@ obj.parse = addError('object',
 
 json = c.app(lambda _1, v, _2: v,
              whitespace, 
-             value,
+             value, # should just be object or array according to RFC 4627
              cut('unparsed input remaining', c.not0(item)))
