@@ -1,4 +1,3 @@
-from .nmrstar import (nmrstar)
 from . import woof as woofstandard
 from .woofpos import (app, wlist, special, woof)
 from .. import conslist

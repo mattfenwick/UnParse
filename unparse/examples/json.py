@@ -115,12 +115,6 @@ value = any_([tok(jsonstring), tok(number), tok(boolean), tok(null), obj, array]
 
 
 
-def between(opener, body, closer, message):
-    return app(lambda _1, bs, _2: bs, 
-               opener,
-               body,
-               cut(message, closer))
-
 def sepBy0(parser, separator):
     return optional([], app(lambda x, xs: [x] + xs,
                             parser,
@@ -128,10 +122,10 @@ def sepBy0(parser, separator):
 
 
 array.parse = addError('array',
-                       between(os,
-                               sepBy0(value, comma),
-                               cs,
-                               'expected ]')).parse
+                       app(lambda _1, bs, _2: bs,
+                           os,
+                           sepBy0(value, comma),
+                           cut('expected ]', cs))).parse
 
 keyVal = addError('key/value pair',
                   app(lambda k, _, v: (k, v),
@@ -140,12 +134,12 @@ keyVal = addError('key/value pair',
                       cut('expected value', value)))
 
 obj.parse = addError('object',
-                     between(oc,
-                             sepBy0(keyVal, comma),
-                             cc,
-                             'expected }')).parse
+                     app(lambda _1, bs, _2: bs,
+                         oc,
+                         sepBy0(keyVal, comma),
+                         cut('expected }', cc))).parse
 
 json = app(lambda _1, v, _2: v,
            whitespace, 
-           value, # should just be object or array according to RFC 4627
+           plus(obj, array),
            cut('unparsed input remaining', not0(item)))
