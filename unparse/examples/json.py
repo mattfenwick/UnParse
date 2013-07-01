@@ -89,6 +89,7 @@ boolean = c.plus(c.seq2R(string('true'), c.pure(True)),
 null = c.seq2R(string('null'), c.pure(None))
 
 
+# hack to allow mutual recursion of rules
 obj = c.error('unimplemented')
 array = c.error('unimplemented')
 
