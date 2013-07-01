@@ -41,7 +41,7 @@ whitespace = many0(oneOf(set(' \t\n\r')))
 
 def numberAction(sign, intp, frac, exp):
     '''
-    It's defiitely lazy ... but is it also effective?
+    It's definitely lazy ... but is it also effective?
     '''
     myString = sign + intp
     if frac == None and exp == None:
@@ -62,7 +62,14 @@ number = app(numberAction,
                                 many1(oneOf('0123456789')))))
 
 # is it an error if 0 <= c <= 31 ??
-_char = satisfy(lambda x: 32 <= ord(x) and x not in '\\"')
+#_char = satisfy(lambda x: 32 <= ord(x) and x not in '\\"')
+def _charCheck(c):
+    if c in '\\"':
+        return zero
+    elif ord(c) < 32:
+        return error([])
+    return pure(c)
+_char = addError('illegal control character', bind(item, _charCheck))
 
 _escapes = {'"': '"',  '\\': '\\', 
             '/': '/',  'b': '\b' ,
@@ -75,7 +82,7 @@ def _escapeAction(x):
     return zero
 
 _escape = seq2R(literal('\\'),
-                bind(item, _escapeAction))
+                cut('illegal escape', bind(item, _escapeAction)))
 
 _hexC = satisfy(lambda x: x in set('0123456789abcdefABCDEF'))
 
@@ -83,10 +90,11 @@ _unic = app(lambda _, cs: unichr(int(''.join(cs), 16)),
            string('\\u'),
            cut('invalid hex escape sequence', all_([_hexC] * 4)))
 
-jsonstring = app(lambda _1, cs, _2: ''.join(cs),
-                 literal('"'),
-                 many0(any_([_char, _escape, _unic])),
-                   cut('string: expected "', literal('"')))
+jsonstring = addError('string',
+                      app(lambda _1, cs, _2: ''.join(cs),
+                          literal('"'),
+                          many0(any_([_char, _unic, _escape])),
+                          cut('expected "', literal('"'))))
 
 boolean = plus(seq2R(string('true'), pure(True)),
                seq2R(string('false'), pure(False)))
