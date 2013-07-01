@@ -39,6 +39,10 @@ class TestJson(unittest.TestCase):
         # optional exponent
         pass
 
+    def testEmptyString(self):
+        inp = '"" def'
+        self.assertEqual(good(l(inp[2:]), (1,3), ''), jsonstring.parse(l(inp), (1,1)))
+
     def testString(self):
         inp = '"abc" def'
         self.assertEqual(good(l(inp[5:]), (1,6), 'abc'), jsonstring.parse(l(inp), (1,1)))
@@ -71,6 +75,7 @@ class TestJson(unittest.TestCase):
         
     def testObject(self):
         self.assertEqual(good(l('abc'), (1,4), []), obj.parse(l('{} abc'), (1,1)))
+        self.assertEqual(good(l('abc'), (1,9), [('', 3)]), obj.parse(l('{"": 3} abc'), (1,1)))
         self.assertEqual(good(l([]), (1,12), [('a', None)]), obj.parse(l('{"a": null}'), (1,1)))
         inp = '{"abc": 123, "def": 456}, null abc'
         self.assertEqual(good(l(inp[24:]), (1,25), [('abc', 123), ('def', 456)]), obj.parse(l(inp), (1,1)))
