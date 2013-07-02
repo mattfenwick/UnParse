@@ -61,8 +61,6 @@ number = app(numberAction,
                                 optional('+', oneOf('+-')),
                                 many1(oneOf('0123456789')))))
 
-# is it an error if 0 <= c <= 31 ??
-#_char = satisfy(lambda x: 32 <= ord(x) and x not in '\\"')
 def _charCheck(c):
     if c in '\\"':
         return zero
@@ -96,10 +94,7 @@ jsonstring = addError('string',
                           many0(any_([_char, _unic, _escape])),
                           cut('expected "', literal('"'))))
 
-boolean = plus(seq2R(string('true'), pure(True)),
-               seq2R(string('false'), pure(False)))
-
-null = seq2R(string('null'), pure(None))
+keyword = any_([seq2R(string(s), pure(v)) for (s, v) in [('true', True), ('false', False), ('null', None)]])
 
 
 # hack to allow mutual recursion of rules
@@ -111,7 +106,7 @@ def tok(parser):
 
 os, cs, oc, cc, comma, colon = map(lambda x: tok(literal(x)), '[]{},:')
 
-value = any_([tok(jsonstring), tok(number), tok(boolean), tok(null), obj, array])
+value = any_([tok(jsonstring), tok(number), tok(keyword), obj, array])
 
 
 
@@ -128,15 +123,24 @@ array.parse = addError('array',
                            cut('expected ]', cs))).parse
 
 keyVal = addError('key/value pair',
-                  app(lambda k, _, v: (k, v),
+                  app(lambda p, k, _, v: (p, k, v),
+                      getState,
                       tok(jsonstring),
                       cut('expected :', colon),
                       cut('expected value', value)))
 
+def buildObject(pairs):
+    obj = {}
+    for (p, k, v) in pairs:
+        if obj.has_key(k):
+            return error([('duplicate key: ' + k, p)])
+        obj[k] = v
+    return pure(obj)
+
 obj.parse = addError('object',
                      app(lambda _1, bs, _2: bs,
                          oc,
-                         sepBy0(keyVal, comma),
+                         bind(sepBy0(keyVal, comma), buildObject),
                          cut('expected }', cc))).parse
 
 json = app(lambda _1, v, _2: v,
