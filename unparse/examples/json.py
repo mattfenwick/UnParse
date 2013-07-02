@@ -15,13 +15,13 @@
 #   where char    :=  not1( '\\'  |  '"'  |  \u0000-\u001F )
 #         escape  :=  '\\'  ["\/bfnrt]                            <-- that's 8 characters
 #         unicode :=  '\\u'  [0-9a-eA-E](4)
-
+from operator import add
 from ..combinators import (bind,   getState, commit,   mapError,
                            many0,  app,      optional, plus,
                            seq2R,  many1,    fmap,     pure,
                            zero,   all_,     any_,     error,
                            seq2L,  itemPosition, tokenPosition,
-                           not0)
+                           not0,   check)
 
 
 item = itemPosition
@@ -39,40 +39,42 @@ def oneOf(cs):
 
 whitespace = many0(oneOf(set(' \t\n\r')))
 
-def buildNumber(sign, intp, frac, exp):
-    # integer portion starts with 2+ 0s -- not okay
-    # all other non-empty integer portions -- okay
-    if intp[:2] == '00':
-        return cut('leading 0', zero)
-        
-    myString = sign + intp
-    if frac == None and exp == None:
-        return pure(int(myString))
-    
+
+def _buildNumber(intp, frac, exp):
+    if frac is None and exp is None:
+        return pure(int(intp))    
     if frac is not None:
-        myString += '.' + frac
+        intp += '.' + frac
     if exp is not None:
-        myString += exp
-    f = float(myString)
+        intp += exp
+    f = float(intp)
     if f in [float('inf'), float('-inf')]:
         return cut('floating-point overflow', zero)
     return pure(f)
 
 _digits = fmap(''.join, many1(oneOf('0123456789')))
+
 _decimal = seq2R(literal('.'), 
                  cut('expected digits', _digits))
+
 _exponent = app(lambda *xs: ''.join(xs),
                 oneOf('eE'), 
                 optional('+', oneOf('+-')),
                 cut('expected exponent', _digits))
 
-_number = bind(all_([optional('+', literal('-')),
-                     _digits,
+_intp = bind(_digits,
+             lambda xs: pure(xs) if xs[0] != '0' or len(xs) == 1 else cut('leading 0', zero))
+
+_number = bind(all_([plus(_intp, 
+                          app(add, 
+                              literal('-'), 
+                              cut('expected digits', _intp))),
                      optional(None, _decimal),
                      optional(None, _exponent)]),
-               lambda xs: buildNumber(*xs))
+               lambda xs: _buildNumber(*xs))
 
 number = addError('number', _number)
+
 
 def _charCheck(c):
     if c in '\\"':

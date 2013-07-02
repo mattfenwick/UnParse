@@ -55,8 +55,8 @@ class TestJson(unittest.TestCase):
                          number.parse(l('123e435321532 abc'), (1,1)))
         
     def testNumberLotsOfLeadingZeroes(self):
-        self.assertEqual(error([('number', (1,1)), ('leading 0', (1,4))]), 
-                         number.parse(l('001 abc'), (1,1)))
+        self.assertEqual(error([('number', (1,1)), ('leading 0', (1,3))]), 
+                         number.parse(l('01 abc'), (1,1)))
         self.assertEqual(error([('number', (1,1)), ('leading 0', (1,5))]), 
                          number.parse(l('-001 abc'), (1,1)))
     
@@ -64,6 +64,10 @@ class TestJson(unittest.TestCase):
         self.assertEqual(error([('number', (1,1)), ('expected exponent', (1,3))]), 
                          number.parse(l('0e abc'), (1,1)))
 
+    def testLoneMinusSign(self):
+        self.assertEqual(error([('number', (1,1)), ('expected digits', (1,2))]), 
+                         number.parse(l('-abc'), (1,1)))
+        
     def testEmptyString(self):
         inp = '"" def'
         self.assertEqual(good(l(inp[2:]), (1,3), ''), jsonstring.parse(l(inp), (1,1)))
@@ -145,9 +149,6 @@ class TestJson(unittest.TestCase):
 notyet = '''
     # errors
 
-    def testLoneMinusSign(self):
-        self.assertEqual(error([]), number.parse(l('-abc', (1,1))))
-        
     def testUnclosedArray(self):
         self.assertEqual(False)
 
