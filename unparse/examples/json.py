@@ -23,6 +23,34 @@ from ..combinators import (bind,   getState, commit,   mapError,
                            seq2L,  itemPosition, tokenPosition,
                            not0)
 
+### CST
+
+def Number(p, s, i, d, e):
+    return {'type': 'number', 'sign': s,
+            'integer': i,     'decimal': e,
+            'exponent': e,    'start': p}
+
+def Exponent(s, i):
+    return {'type': 'exponent',
+            'sign': s, 'integer': i}
+
+def Keyword(p, v):
+    return {'start': p, 'type': 'keyword',
+            'value': v}
+
+def String(p, cs, s):
+    return {'type': 'string', 'start': p,
+            'chars': cs,      'stop' : s}
+
+def Object(p, pairs, s):
+    return {'type': 'object', 'start': p,
+            'pairs': pairs,   'stop': s}
+    
+def Array(p, elems, s):
+    return {'type': 'array', 'start': p,
+            'elems': elems,  'stop': s}
+
+###
 
 item = itemPosition
 (literal, satisfy, not1, string) = tokenPosition
@@ -37,32 +65,16 @@ def oneOf(cs):
     return satisfy(lambda x: x in cs)
 
 
-whitespace = many0(oneOf(set(' \t\n\r')))
-
-def numberAction(sign, intp, frac, exp):
-    '''
-    It's definitely lazy ... but is it also effective?
-    '''
-    myString = sign + intp
-    if frac == None and exp == None:
-        return int(myString)
-    if frac is not None:
-        myString += '.' + frac
-    if exp is not None:
-        myString += exp
-    return float(myString)
-
-number = app(numberAction,
+number = app(Number,
+             getState,
              optional('+', literal('-')),
              plus(literal('0'), app(lambda y, ys: ''.join([y] + ys), oneOf('123456789'), many0(oneOf('0123456789')))),
              optional(None, seq2R(literal('.'), fmap(''.join, many1(oneOf('0123456789'))))),
-             optional(None, app(lambda x,y,z: ''.join([x,y,''.join(z)]), 
+             optional(None, app(lambda _,y,z: Exponent(y, z), 
                                 oneOf('eE'), 
                                 optional('+', oneOf('+-')),
-                                many1(oneOf('0123456789')))))
+                                fmap(''.join, many1(oneOf('0123456789'))))))
 
-# is it an error if 0 <= c <= 31 ??
-#_char = satisfy(lambda x: 32 <= ord(x) and x not in '\\"')
 def _charCheck(c):
     if c in '\\"':
         return zero
@@ -91,27 +103,28 @@ _unic = app(lambda _, cs: unichr(int(''.join(cs), 16)),
            cut('invalid hex escape sequence', all_([_hexC] * 4)))
 
 jsonstring = addError('string',
-                      app(lambda _1, cs, _2: ''.join(cs),
-                          literal('"'),
-                          many0(any_([_char, _unic, _escape])),
-                          cut('expected "', literal('"'))))
+                      app(String,
+                          seq2L(getState, literal('"')),
+                          fmap(''.join, many0(any_([_char, _unic, _escape]))),
+                          seq2L(getState, cut('expected "', literal('"')))))
 
-boolean = plus(seq2R(string('true'), pure(True)),
-               seq2R(string('false'), pure(False)))
-
-null = seq2R(string('null'), pure(None))
+keyword = app(Keyword,
+              getState,
+              any_(map(string, ['true', 'false', 'null'])))
 
 
 # hack to allow mutual recursion of rules
 obj = error('unimplemented')
 array = error('unimplemented')
 
+whitespace = many0(oneOf(set(' \t\n\r')))
+
 def tok(parser):
     return seq2L(parser, whitespace)
 
-os, cs, oc, cc, comma, colon = map(lambda x: tok(literal(x)), '[]{},:')
+os, cs, oc, cc, comma, colon = map(lambda x: seq2L(getState, tok(literal(x))), '[]{},:')
 
-value = any_([tok(jsonstring), tok(number), tok(boolean), tok(null), obj, array])
+value = any_([tok(jsonstring), tok(number), tok(keyword), obj, array])
 
 
 
@@ -122,7 +135,7 @@ def sepBy0(parser, separator):
 
 
 array.parse = addError('array',
-                       app(lambda _1, bs, _2: bs,
+                       app(Array,
                            os,
                            sepBy0(value, comma),
                            cut('expected ]', cs))).parse
@@ -134,7 +147,7 @@ keyVal = addError('key/value pair',
                       cut('expected value', value)))
 
 obj.parse = addError('object',
-                     app(lambda _1, bs, _2: bs,
+                     app(Object,
                          oc,
                          sepBy0(keyVal, comma),
                          cut('expected }', cc))).parse
