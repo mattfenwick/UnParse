@@ -34,12 +34,35 @@ l = conslist.ConsList.fromIterable
 
 class TestJson(unittest.TestCase):
     
-    def testNumber(self):
-        # sign
-        # int body
-        # optional decimal
-        # optional exponent
-        pass
+    def testInteger(self):
+        inp = '839001 abc'
+        self.assertEqual(good(l(inp[6:]), (1,7), 839001), number.parse(l(inp), (1,1)))
+        inp2 = '-7777 abc'
+        self.assertEqual(good(l(inp2[5:]), (1,6), -7777), number.parse(l(inp2), (1,1)))
+        self.assertEqual(good(l('abc'), (1,2), 0), number.parse(l('0abc'), (1,1)))
+        self.assertEqual(good(l('abc'), (1,3), 0), number.parse(l('-0abc'), (1,1)))
+        
+    def testDecimal(self):
+        inp = '839.001 abc'
+        self.assertEqual(good(l(inp[7:]), (1,8), 839.001), number.parse(l(inp), (1,1)))
+        inp2 = '-77e77 abc'
+        self.assertEqual(good(l(inp2[6:]), (1,7), -7.7e78), number.parse(l(inp2), (1,1)))
+        self.assertEqual(good(l('abc'), (1,4), 0), number.parse(l('0e2abc'), (1,1)))
+        self.assertEqual(good(l('abc'), (1,7), 0), number.parse(l('-0.000abc'), (1,1)))
+
+    def testNumberTooBig(self): # just applies to decimals, or ints too?
+        self.assertEqual(error([('number', (1,1)), ('floating-point overflow', (1,14))]), 
+                         number.parse(l('123e435321532 abc'), (1,1)))
+        
+    def testNumberLotsOfLeadingZeroes(self):
+        self.assertEqual(error([('number', (1,1)), ('leading 0', (1,4))]), 
+                         number.parse(l('001 abc'), (1,1)))
+        self.assertEqual(error([('number', (1,1)), ('leading 0', (1,5))]), 
+                         number.parse(l('-001 abc'), (1,1)))
+    
+    def testNumberMessedUpExponent(self):
+        self.assertEqual(error([('number', (1,1)), ('expected exponent', (1,3))]), 
+                         number.parse(l('0e abc'), (1,1)))
 
     def testEmptyString(self):
         inp = '"" def'
@@ -121,9 +144,10 @@ class TestJson(unittest.TestCase):
 
 notyet = '''
     # errors
-    def testNumberTooBig(self): # just applies to decimals, or ints too?
-        self.assertEqual(False)
 
+    def testLoneMinusSign(self):
+        self.assertEqual(error([]), number.parse(l('-abc', (1,1))))
+        
     def testUnclosedArray(self):
         self.assertEqual(False)
 
@@ -134,9 +158,6 @@ notyet = '''
         self.assertEqual(False)
 
     def testUnclosedObject(self): # cases: {"a":      {"a"     {"a": b     {"a":b,     {"a": b ] } 
-        self.assertEqual(False)
-
-    def testNumberLotsOfLeadingZeroes(self):
         self.assertEqual(False)
 
     def testJSONBadInputType(self): # should be unicode or something according to spec

@@ -39,27 +39,40 @@ def oneOf(cs):
 
 whitespace = many0(oneOf(set(' \t\n\r')))
 
-def numberAction(sign, intp, frac, exp):
-    '''
-    It's definitely lazy ... but is it also effective?
-    '''
+def buildNumber(sign, intp, frac, exp):
+    # integer portion starts with 2+ 0s -- not okay
+    # all other non-empty integer portions -- okay
+    if intp[:2] == '00':
+        return cut('leading 0', zero)
+        
     myString = sign + intp
     if frac == None and exp == None:
-        return int(myString)
+        return pure(int(myString))
+    
     if frac is not None:
         myString += '.' + frac
     if exp is not None:
         myString += exp
-    return float(myString)
+    f = float(myString)
+    if f in [float('inf'), float('-inf')]:
+        return cut('floating-point overflow', zero)
+    return pure(f)
 
-number = app(numberAction,
-             optional('+', literal('-')),
-             plus(literal('0'), app(lambda y, ys: ''.join([y] + ys), oneOf('123456789'), many0(oneOf('0123456789')))),
-             optional(None, seq2R(literal('.'), fmap(''.join, many1(oneOf('0123456789'))))),
-             optional(None, app(lambda x,y,z: ''.join([x,y,''.join(z)]), 
-                                oneOf('eE'), 
-                                optional('+', oneOf('+-')),
-                                many1(oneOf('0123456789')))))
+_digits = fmap(''.join, many1(oneOf('0123456789')))
+_decimal = seq2R(literal('.'), 
+                 cut('expected digits', _digits))
+_exponent = app(lambda *xs: ''.join(xs),
+                oneOf('eE'), 
+                optional('+', oneOf('+-')),
+                cut('expected exponent', _digits))
+
+_number = bind(all_([optional('+', literal('-')),
+                     _digits,
+                     optional(None, _decimal),
+                     optional(None, _exponent)]),
+               lambda xs: buildNumber(*xs))
+
+number = addError('number', _number)
 
 def _charCheck(c):
     if c in '\\"':
