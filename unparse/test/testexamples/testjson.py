@@ -1,7 +1,7 @@
 '''
 @author: mattf
 '''
-from ...examples.json import (json, jsonstring, number, oc, cc, os, cs, comma, colon, keyword, obj, array)
+from ...examples.json import (json, jsonstring, number, oc, cc, os, cs, comma, colon, keyword, obj, array, keyVal)
 from ... import maybeerror
 from ... import conslist
 import unittest
@@ -104,6 +104,18 @@ class TestJson(unittest.TestCase):
         self.assertEqual(good(l(' abc'), (1,6), False), keyword.parse(l('false abc'), (1,1)))
         self.assertEqual(good(l(' abc'), (1,5), None), keyword.parse(l('null abc'), (1,1)))
         
+    def testKeyVal(self):
+        self.assertEqual(good(l('abc'), (2,6), ((1,1), 'qrs', 3)),
+                         keyVal.parse(l('"qrs"\n : 3 abc'), (1,1)))
+        
+    def testKeyValueMissingColon(self):
+        self.assertEqual(error([('key/value pair', (1,1)), ('expected :', (1,6))]),
+                         keyVal.parse(l('"qrs"} abc'), (1,1)))
+        
+    def testKeyValueMissingValue(self):
+        self.assertEqual(error([('key/value pair', (1,1)), ('expected value', (1,10))]),
+                         keyVal.parse(l('"qrs" :  abc'), (1,1)))
+
     def testObject(self):
         self.assertEqual(good(l('abc'), (1,4), {}), obj.parse(l('{} abc'), (1,1)))
         self.assertEqual(good(l('abc'), (1,9), {'': 3}), obj.parse(l('{"": 3} abc'), (1,1)))
@@ -119,11 +131,21 @@ class TestJson(unittest.TestCase):
         self.assertEqual(error([('object', (1,1)), ('duplicate key: A', (2,1))]), 
                          obj.parse(l('{"A": 2,\n"\\u0041": 3}'), (1,1)))
 
+    def testUnclosedObject(self): 
+        e = error([('object', (1,1)), ('expected }', (1,12))])
+        self.assertEqual(e, obj.parse(l('{"a": null '), (1,1)))
+        self.assertEqual(e, obj.parse(l('{"a": null ,'), (1,1)))
+        self.assertEqual(e, obj.parse(l('{"a": null ]'), (1,1)))
+
     def testArray(self):
         self.assertEqual(good(l('abc'), (1,4), []), array.parse(l('[] abc'), (1,1)))
         self.assertEqual(good(l([]), (1,7), [True]), array.parse(l('[true]'), (1,1)))
         inp = '["abc", 123], null abc'
         self.assertEqual(good(l(inp[12:]), (1,13), ['abc', 123]), array.parse(l(inp), (1,1)))
+
+    def testUnclosedArray(self):
+        self.assertEqual(error([('array', (1,1)), ('expected ]', (1,5))]), 
+                         array.parse(l('[2,3'), (1,1)))
 
     def testJson(self):
         self.assertEqual(good(l([]), (3,1), {'abc': [True, None], 'def': 32}), 
@@ -148,18 +170,6 @@ class TestJson(unittest.TestCase):
 
 notyet = '''
     # errors
-
-    def testUnclosedArray(self):
-        self.assertEqual(False)
-
-    def testKeyValueMissingColon(self):
-        self.assertEqual(False)
-
-    def testKeyValueMissingValue(self):
-        self.assertEqual(False)
-
-    def testUnclosedObject(self): # cases: {"a":      {"a"     {"a": b     {"a":b,     {"a": b ] } 
-        self.assertEqual(False)
 
     def testJSONBadInputType(self): # should be unicode or something according to spec
         self.assertEqual(False)
