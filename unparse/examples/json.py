@@ -34,10 +34,11 @@ def addError(e, parser):
     return bind(getState,
                 lambda pos: mapError(lambda es: [(e, pos)] + es, parser))
 def oneOf(cs):
-    return satisfy(lambda x: x in cs)
+    c_set = set(cs)
+    return satisfy(lambda x: x in c_set)
 
 
-whitespace = many0(oneOf(set(' \t\n\r')))
+whitespace = many0(oneOf(' \t\n\r'))
 
 
 def _buildNumber(strings):
@@ -77,6 +78,7 @@ def _charCheck(c):
     elif ord(c) < 32:
         return error([])
     return pure(c)
+
 _char = addError('illegal control character', bind(item, _charCheck))
 
 _escapes = {'"': '"',  '\\': '\\', 
@@ -92,11 +94,11 @@ def _escapeAction(x):
 _escape = seq2R(literal('\\'),
                 cut('illegal escape', bind(item, _escapeAction)))
 
-_hexC = satisfy(lambda x: x in set('0123456789abcdefABCDEF'))
+_hexC = oneOf('0123456789abcdefABCDEF')
 
 _unic = app(lambda _, cs: unichr(int(''.join(cs), 16)),
-           string('\\u'),
-           cut('invalid hex escape sequence', all_([_hexC] * 4)))
+            string('\\u'),
+            cut('invalid hex escape sequence', all_([_hexC] * 4)))
 
 jsonstring = addError('string',
                       app(lambda _1, cs, _2: ''.join(cs),
@@ -104,7 +106,9 @@ jsonstring = addError('string',
                           many0(any_([_char, _unic, _escape])),
                           cut('expected "', literal('"'))))
 
-keyword = any_([seq2R(string(s), pure(v)) for (s, v) in [('true', True), ('false', False), ('null', None)]])
+_keywords = [('true', True), ('false', False), ('null', None)]
+
+keyword = any_([seq2R(string(s), pure(v)) for (s, v) in _keywords])
 
 
 # hack to allow mutual recursion of rules
