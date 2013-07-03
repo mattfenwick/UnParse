@@ -1,7 +1,9 @@
 '''
 @author: mattf
 '''
-from ...examples.json import (json, jsonstring, number, oc, cc, os, cs, comma, colon, keyword, obj, array, keyVal)
+from ...examples.json import (json, jsonstring, number, 
+                              oc, cc, os, cs, comma, colon, 
+                              keyword, obj, array, keyVal)
 from ... import maybeerror
 from ... import conslist
 import unittest
@@ -53,6 +55,9 @@ class TestJson(unittest.TestCase):
     def testNumberTooBig(self): # just applies to decimals, or ints too?
         self.assertEqual(error([('number', (1,1)), ('floating-point overflow', (1,14))]), 
                          number.parse(l('123e435321532 abc'), (1,1)))
+        big_number = '3248972349823497234983274923847324897234982349723498327492384732489723498234972349832749238473248972349823497234983274923847324897234982349723498327492384732489723498234972349832749238473248972349823497234983274923847324897234982349723498327492384732489723498234972349832749238473248972349823497234983274923847'
+        self.assertEqual(error([('number', (1,1)), ('floating-point overflow', (1,311))]), 
+                         number.parse(l(big_number + ' abc'), (1,1)))
         
     def testNumberLotsOfLeadingZeroes(self):
         self.assertEqual(error([('number', (1,1)), ('leading 0', (1,3))]), 

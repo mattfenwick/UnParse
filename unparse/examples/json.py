@@ -40,14 +40,8 @@ def oneOf(cs):
 whitespace = many0(oneOf(set(' \t\n\r')))
 
 
-def _buildNumber(intp, frac, exp):
-    if frac is None and exp is None:
-        return pure(int(intp))    
-    if frac is not None:
-        intp += '.' + frac
-    if exp is not None:
-        intp += exp
-    f = float(intp)
+def _buildNumber(strings):
+    f = float(''.join(strings))
     if f in [float('inf'), float('-inf')]:
         return cut('floating-point overflow', zero)
     return pure(f)
@@ -69,9 +63,10 @@ _number = bind(all_([plus(_intp,
                           app(add, 
                               literal('-'), 
                               cut('expected digits', _intp))),
-                     optional(None, _decimal),
-                     optional(None, _exponent)]),
-               lambda xs: _buildNumber(*xs))
+                     pure('.'), # kind of a hack, b/c I'm too lazy to make _decimal return the '.' too
+                     optional('', _decimal),
+                     optional('', _exponent)]),
+               _buildNumber)
 
 number = addError('number', _number)
 
