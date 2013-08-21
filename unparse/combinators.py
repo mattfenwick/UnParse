@@ -2,6 +2,64 @@ from .maybeerror import MaybeError as M
 
 
 
+class ConsList(object):
+    '''
+    A data structure that supports constant-time first/rest slicing.
+    The input sequence is never copied or modified -- all the slicing
+    does is increment a position counter and create a new wrapper.
+    '''
+
+    def __init__(self, seq, start):
+        self.seq = seq
+        self.start = start
+        
+    def isEmpty(self):
+        return self.start >= len(self.seq)
+        
+    def first(self):
+        '''
+        Returns first element.  Throws exception if empty.
+        '''
+        if not self.isEmpty():
+            return self.seq[self.start]
+        raise ValueError('cannot get first element of empty sequence')
+        
+    def rest(self):
+        '''
+        Return ConsList of all but the first element.
+        Throws exception if empty.
+        '''
+        if not self.isEmpty():
+            return ConsList(self.seq, self.start + 1)
+        raise ValueError('cannot get rest of empty sequence')
+    
+    def getAsList(self):
+        '''
+        Return list of remaining elements.
+        '''
+        return list(self.seq[self.start:])
+    
+    @staticmethod
+    def fromIterable(seq):
+        return ConsList(seq, 0)
+        
+    def __eq__(self, other):
+        try:
+            return self.getAsList() == other.getAsList()
+        except:
+            return False
+    
+    def __ne__(self, other):
+        return not self.__eq__(other)
+        
+    def __repr__(self):
+        return repr({
+            'type': 'cons list', 
+            'sequence': self.getAsList()
+        })
+
+
+
 class Parser(object):
     '''
     A wrapper around a callable of type `[t] -> s -> ME ([t], s, a)`.
@@ -234,6 +292,28 @@ def any_(parsers):
         return r
     return Parser(f)
 
+def cut(message, parser):
+    """
+    assumes errors are lists
+    """
+    return bind(getState, lambda p: commit([(message, p)], parser))
+
+def addError(e, parser):
+    """
+    assumes errors are lists, and
+    that the state is a position
+    """
+    return bind(getState,
+                lambda pos: mapError(lambda es: [(e, pos)] + es, parser))
+
+def sepBy1(parser, separator):
+    return app(lambda x, xs: [x] + xs,
+               parser,
+               many0(seq2R(separator, parser)))
+
+def sepBy0(parser, separator):
+    return optional([], sepBy1(parser, separator))
+
 # Parser e s (m t) a
 zero = Parser(lambda xs, s: M.zero)
 
@@ -315,3 +395,6 @@ def _itemPosition(xs, position):
 
 itemPosition = Parser(_itemPosition)
 tokenPosition = tokenPrimitives(itemPosition)
+
+def run(parser, input_string):
+    return parser.parse(ConsList.fromIterable(input_string), (1,1))

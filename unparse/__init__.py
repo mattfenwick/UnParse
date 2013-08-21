@@ -1,4 +1,3 @@
-from .conslist import ConsList
 from .maybeerror import MaybeError
 from .combinators import *
 

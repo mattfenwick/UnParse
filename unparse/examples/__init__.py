@@ -1,6 +1,5 @@
 from . import woof as woofstandard
 from .woofpos import (app, wlist, special, woof)
-from .. import conslist
 from .json import (json, number, whitespace, jsonstring, keyword, array, obj)
 
 
