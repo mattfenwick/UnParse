@@ -1,12 +1,11 @@
 from .. import combinators as c
-from .. import conslist
 from .. import maybeerror as me
 import unittest as u
 
 
 m = me.MaybeError
 
-l = conslist.ConsList.fromIterable
+l = c.ConsList
 
 def good(rest, state, result):
     return m.pure({'rest': rest, 'state': state, 'result': result})

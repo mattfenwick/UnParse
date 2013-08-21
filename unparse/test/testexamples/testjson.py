@@ -5,7 +5,7 @@ from ...examples.json import (json, jsonstring, number,
                               oc, cc, os, cs, comma, colon, 
                               keyword, obj, array, keyVal)
 from ... import maybeerror
-from ... import conslist
+from ... import combinators
 import unittest
 
 
@@ -14,7 +14,7 @@ def good(rest, state, value):
 
 error = maybeerror.MaybeError.error
 
-l = conslist.ConsList.fromIterable
+l = combinators.ConsList
 
 #
 # Value   :=  'false'  |  'null'  |  'true'  |  Object  |  Array  |  Number  |  String

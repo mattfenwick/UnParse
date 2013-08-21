@@ -9,7 +9,7 @@ class ConsList(object):
     does is increment a position counter and create a new wrapper.
     '''
 
-    def __init__(self, seq, start):
+    def __init__(self, seq, start=0):
         self.seq = seq
         self.start = start
         
@@ -38,10 +38,6 @@ class ConsList(object):
         Return list of remaining elements.
         '''
         return list(self.seq[self.start:])
-    
-    @staticmethod
-    def fromIterable(seq):
-        return ConsList(seq, 0)
         
     def __eq__(self, other):
         try:
@@ -396,5 +392,5 @@ def _itemPosition(xs, position):
 itemPosition = Parser(_itemPosition)
 tokenPosition = tokenPrimitives(itemPosition)
 
-def run(parser, input_string):
-    return parser.parse(ConsList.fromIterable(input_string), (1,1))
+def run(parser, input_string, state=(1,1)):
+    return parser.parse(ConsList(input_string), state)

@@ -1,8 +1,8 @@
-from .. import conslist
+from .. import combinators
 import unittest as u
 
 
-C = conslist.ConsList
+C = combinators.ConsList
 
 c1 = C([1,2,3,4], 0) # normal, not empty
 c2 = C([], 0)        # normal, empty
@@ -44,11 +44,6 @@ class TestConsList(u.TestCase):
         self.assertEqual([8,4], c3.getAsList())
         self.assertEqual([], c4.getAsList())
         self.assertEqual([], c5.getAsList())
-    
-    def testFromIterable(self):
-        myC = C.fromIterable(range(8))
-        self.assertEqual(range(8), myC.getAsList())
-        self.assertEqual(myC, C(range(-1, 8), 1))
     
     def testEquality(self):
         self.assertEqual(C([1,2,3], 0), C([0,1,2,3], 1))
