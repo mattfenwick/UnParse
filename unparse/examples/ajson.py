@@ -17,13 +17,6 @@
 #         escape  :=  '\\'  ["\/bfnrt]                            <-- that's 8 characters
 #         unicode :=  '\\u'  [0-9a-eA-E](4)
 
-# GOAL:  MAKE PARSER LOOK AS SIMILAR TO GRAMMAR AS POSSIBLE
-#        INTRODUCE NEW COMBINATORS IF NECESSARY
-
-# still need to check that integers don't have leading 0's (except for the number 0)
-# and that the escape sequences from strings are valid
-# and that no illegal control characters are in strings
-
 from ..combinators import (bind,    getState,       commit,    run,
                            many0,   app,            optional,  plus,
                            seq2R,   many1,          fmap,      pure,
@@ -95,13 +88,13 @@ _char = node('character',
 
 _escape = node('escape', 
                ('open', literal('\\')),
-               ('character', item))
+               ('value', item))
 
 _hexC = oneOf('0123456789abcdefABCDEF')
 
 _unic = node('unicode escape',
              ('open', string('\\u')),
-             ('escape', cut('expected 4 hexidecimal digits', quantity(_hexC, 4))))
+             ('value', cut('expected 4 hexidecimal digits', quantity(_hexC, 4))))
 
 _jsonstring = node('string', 
                    ('open', literal('"')), 
@@ -144,3 +137,70 @@ json = node('json',
             ('leading', whitespace), # kind of silly -- the only ws that isn't thrown away
             ('value', plus(obj, array)),
             ('trailing', cut('unparsed input remaining', not0(item)))) # always presents a value of `None` if it succeeds
+
+
+# tree traversal:  
+# checks:
+#    integers don't have leading 0's (except for the number 0)
+#    no number overflow
+#    no duplicate keys in maps
+# maps:
+#    number literals to numbers
+# doneskies:
+#    no illegal control characters are in strings
+#    escape sequences from strings are valid
+#    unicode escape sequences to chars
+#    characters to chars
+#    escapes to chars
+#    join up string literal
+
+from ..maybeerror import MaybeError as Me
+
+def add_error(message, position, comp):
+#    return me.map_error(lambda es: [(message, position)] + es, comp)
+    return comp.mapError(lambda es: [(message, position)] + es)
+
+_escapes = {'"': '"',  '\\': '\\', 
+            '/': '/',  'b': '\b' ,
+            'f': '\f', 'n': '\n' ,
+            'r': '\r', 't': '\t'  }
+
+def t_char(node):
+    val = node['value']
+    if node['_type'] == 'unicode escape':
+        return Me.pure(unichr(int(''.join(val), 16)))
+    elif node['_type'] == 'escape':
+        if val in _escapes:
+            return Me.pure(_escapes[val])
+        return Me.error([('invalid escape sequence', node['_pos'])])
+    elif node['_type'] == 'character':
+        if ord(val) < 32:
+            return Me.error([('invalid control character', node['_pos'])])
+        return Me.pure(val)
+    raise TypeError('invalid character node type -- ' + str(node['_type']))
+
+def t_string(node):
+    # check that node _type is string (optional)
+    # pull out the value (?), fix up all the characters, join them into a string
+    # watch out for errors, reporting position if necessary
+    return add_error('string', node['_pos'], Me.app(lambda *args: ''.join(args), *map(t_char, node['value'])))
+
+def t_number(node):
+    # check that node _type is number (optional)
+    # check that there's no leading 0's
+    # convert to a float
+    # check for overflow
+    i = ''.join(node['integer'])
+    d = node['decimal'] if node['decimal'] else ''
+    exp = ''
+    if node['exponent']:
+        exp += node['exponent']['letter']
+        exp += node['exponent']['sign']
+        exp += ''.join(node['exponent']['power'])
+    val = ''.join([i, '.', d, exp])
+    if val[0] == '0' and len(val) > 1:
+        return Me.error([('invalid leading 0 in number', node['_pos'])])
+    num = float(val)
+    if num in map(float, ['inf', '-inf']):
+        return Me.error([('floating-point overflow', node['_pos'])])
+    return Me.pure(num)
