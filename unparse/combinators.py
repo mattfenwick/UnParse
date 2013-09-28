@@ -320,40 +320,45 @@ get = Parser(lambda xs, s: good(xs, xs, s))
 getState = Parser(lambda xs, s: good(s, xs, s))
 
 
-def tokenPrimitives(itemP):
-    '''
-    These parsers are built out of the most basic parser -- itemP -- that 
-    consumes one single token if available.
-    I couldn't figure out any better place to put them or thing to do with them --
-    they don't seem to belong in a class, as far as I can tell.
-    '''
+class Itemizer(object):
     
-    def literal(x):
+    def __init__(self, itemP):
+        '''
+        itemP :: [t] -> s -> MaybeError e (t, [t], s)
+        `itemP` is the most basic parser and should:
+         - succeed, consuming one single token if there are any tokens left
+         - fail if there are no tokens left
+        '''
+        self.item = Parser(itemP)
+
+    def literal(self, x):
         '''
         Eq t => t -> Parser e s (m t) t
         '''
-        return check(lambda y: x == y, itemP)
-
-    def satisfy(pred):
+        return check(lambda y: x == y, self.item)
+    
+    def satisfy(self, pred):
         '''
         (t -> Bool) -> Parser e s (m t) t
         '''
-        return check(pred, itemP)
-
-    def not1(self):
+        return check(pred, self.item)
+    
+    def not1(self, parser):
         '''
         Parser e s (m t) a -> Parser e s (m t) t
         '''
-        return seq2R(not0(self), itemP)
+        return seq2R(not0(parser), self.item)
 
-    def string(elems):
+    def string(self, elems):
         '''
         Eq t => [t] -> Parser e s (m t) [t] 
         '''
-        matcher = all_(map(literal, elems))
+        matcher = all_(map(self.literal, elems))
         return seq2R(matcher, pure(elems))
     
-    return (literal, satisfy, not1, string)
+    def oneOf(self, elems):
+        c_set = set(elems)
+        return self.satisfy(lambda x: x in c_set)
 
 
 def _itemBasic(xs, s):
@@ -365,10 +370,6 @@ def _itemBasic(xs, s):
         return M.zero
     first, rest = xs.first(), xs.rest()
     return good(first, rest, s)
-
-itemBasic = Parser(_itemBasic)
-tokenBasic = tokenPrimitives(itemBasic)
-
 
 def _bump(c, p):
     line, col = p
@@ -389,8 +390,39 @@ def _itemPosition(xs, position):
     first, rest = xs.first(), xs.rest()
     return good(first, rest, _bump(first, position))
 
-itemPosition = Parser(_itemPosition)
-tokenPosition = tokenPrimitives(itemPosition)
+position = Itemizer(_itemPosition)
+basic = Itemizer(_itemBasic)
+
 
 def run(parser, input_string, state=(1,1)):
+    '''
+    Run a parser given the token input and state.
+    '''
     return parser.parse(ConsList(input_string), state)
+
+# wish I could put `pairs` in a kwargs dictionary, but then the order would be lost
+def node(name, *pairs):
+    """
+    1. runs parsers in sequence
+    2. collects results into a dictionary
+    3. grabs state at which parsers started
+    4. adds an error frame
+    """
+    names = map(lambda x: x[0], pairs)
+    if len(names) != len(set(names)):
+        raise ValueError('duplicate names')
+    if '_type' in names:
+        raise ValueError('forbidden key: "_type"')
+    if '_pos' in names:
+        raise ValueError('forbidden key: "_pos"')
+    def action(pos, results):
+        out = dict(results)
+        out['_pos'] = pos
+        out['_type'] = name
+        return out
+    def closure_workaround(s): # captures s
+        return lambda y: (s, y)
+    return addError(name, 
+                    app(action, 
+                        getState, 
+                        all_([fmap(closure_workaround(s), p) for (s, p) in pairs])))

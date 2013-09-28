@@ -1,7 +1,7 @@
-from .. import combinators
-from . import woof as woofstandard
-from .woofpos import (app, wlist, special, woof)
-from .json import (json, number, whitespace, jsonstring, keyword, array, obj)
+#from .. import combinators
+#from . import woof as woofstandard
+#from .woofpos import (app, wlist, special, woof)
+#from .json import (json, number, whitespace, jsonstring, keyword, array, obj)
 
 
 
