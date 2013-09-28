@@ -86,6 +86,10 @@ _number = node('number',
 _char = node('character',
              ('value', not1(oneOf('\\"'))))
 
+# yes, this allows *any* character to be escaped
+#   invalid characters are handled by a later pass
+#   this assumes that doing so will not change the
+#   parse result
 _escape = node('escape', 
                ('open', literal('\\')),
                ('value', item))
@@ -160,7 +164,6 @@ json = node('json',
 from ..maybeerror import MaybeError as Me
 
 def add_error(message, position, comp):
-#    return me.map_error(lambda es: [(message, position)] + es, comp)
     return comp.mapError(lambda es: [(message, position)] + es)
 
 _escapes = {'"': '"',  '\\': '\\', 
@@ -173,10 +176,12 @@ def t_char(node):
     if node['_type'] == 'unicode escape':
         return Me.pure(unichr(int(''.join(val), 16)))
     elif node['_type'] == 'escape':
+        # is the escape sequence valid?
         if val in _escapes:
             return Me.pure(_escapes[val])
         return Me.error([('invalid escape sequence', node['_pos'])])
     elif node['_type'] == 'character':
+        # no control characters allowed!
         if ord(val) < 32:
             return Me.error([('invalid control character', node['_pos'])])
         return Me.pure(val)
@@ -190,10 +195,8 @@ def t_string(node):
 
 def t_number(node):
     # check that node _type is number (optional)
-    # check that there's no leading 0's
-    # convert to a float
-    # check for overflow
     i = ''.join(node['integer'])
+    # check that there's no leading 0's
     if i[0] == '0' and len(i) > 1:
         return Me.error([('invalid leading 0 in number', node['_pos'])])
     d = ''.join(node['decimal']) if node['decimal'] else ''
@@ -203,7 +206,9 @@ def t_number(node):
         exp += node['exponent']['sign']
         exp += ''.join(node['exponent']['power'])
     val = ''.join([i, '.', d, exp])
+    # convert to a float
     num = float(val)
+    # check for overflow
     if num in map(float, ['inf', '-inf']):
         return Me.error([('floating-point overflow', node['_pos'])])
     return Me.pure(num)
