@@ -1,3 +1,4 @@
+# Json    :=  Object  |  Array
 #
 # Value   :=  'false'  |  'null'  |  'true'  |  Object  |  Array  |  Number  |  String
 # 
@@ -15,149 +16,108 @@
 #   where char    :=  not1( '\\'  |  '"'  |  \u0000-\u001F )
 #         escape  :=  '\\'  ["\/bfnrt]                            <-- that's 8 characters
 #         unicode :=  '\\u'  [0-9a-eA-E](4)
-from operator import add
-from ..combinators import (bind,   getState, commit,   mapError,
-                           many0,  app,      optional, plus,
-                           seq2R,  many1,    fmap,     pure,
-                           zero,   all_,     any_,     error,
-                           seq2L,  itemPosition, tokenPosition,
-                           not0,   check)
+
+from ..combinators import (many0,   optional,   plus,     node,   app,
+                           seq2R,   many1,      all_,     any_,   error,
+                           seq2L,   position,   sepBy0,   not0,   cut,    pure)
 
 
-item = itemPosition
-(literal, satisfy, not1, string) = tokenPosition
+(item, literal, satisfy) = (position.item, position.literal, position.satisfy)
+(oneOf, not1, string) = (position.oneOf, position.not1, position.string)
 
-def cut(message, parser):
-    return bind(getState, lambda p: commit([(message, p)], parser))
-
-def addError(e, parser):
-    return bind(getState,
-                lambda pos: mapError(lambda es: [(e, pos)] + es, parser))
-def oneOf(cs):
-    c_set = set(cs)
-    return satisfy(lambda x: x in c_set)
+def quantity(p, num):
+    return all_([p] * num)
 
 
 whitespace = many0(oneOf(' \t\n\r'))
 
-
-def _buildNumber(strings):
-    f = float(''.join(strings))
-    if f in [float('inf'), float('-inf')]:
-        return cut('floating-point overflow', zero)
-    return pure(f)
-
-_digits = fmap(''.join, many1(oneOf('0123456789')))
+_digits = many1(oneOf('0123456789'))
 
 _decimal = seq2R(literal('.'), 
                  cut('expected digits', _digits))
 
-_exponent = app(lambda *xs: ''.join(xs),
-                oneOf('eE'), 
-                optional('+', oneOf('+-')),
-                cut('expected exponent', _digits))
+_exponent = node('exponent', 
+                 ('letter', oneOf('eE')), 
+                 ('sign', optional('+', oneOf('+-'))),
+                 ('power', cut('expected exponent power', _digits)))
 
-_intp = bind(_digits,
-             lambda xs: pure(xs) if xs[0] != '0' or len(xs) == 1 else cut('leading 0', zero))
+_number = node('number', 
+               ('integer', plus(_digits, 
+                                all_([literal('-'), 
+                                      cut('expected digits', _digits)]))),
+               ('decimal', optional(None, _decimal)),
+               ('exponent', optional(None, _exponent)))
 
-_number = bind(all_([plus(_intp, 
-                          app(add, 
-                              literal('-'), 
-                              cut('expected digits', _intp))),
-                     pure('.'), # kind of a hack, b/c I'm too lazy to make _decimal return the '.' too
-                     optional('', _decimal),
-                     optional('', _exponent)]),
-               _buildNumber)
+_char = node('character',
+             ('value', not1(oneOf('\\"'))))
 
-number = addError('number', _number)
-
-
-def _charCheck(c):
-    if c in '\\"':
-        return zero
-    elif ord(c) < 32:
-        return error([])
-    return pure(c)
-
-_char = addError('illegal control character', bind(item, _charCheck))
-
-_escapes = {'"': '"',  '\\': '\\', 
-            '/': '/',  'b': '\b' ,
-            'f': '\f', 'n': '\n' ,
-            'r': '\r', 't': '\t'  }
-
-def _escapeAction(x):
-    if _escapes.has_key(x):
-        return pure(_escapes[x])
-    return zero
-
-_escape = seq2R(literal('\\'),
-                cut('illegal escape', bind(item, _escapeAction)))
+# yes, this allows *any* character to be escaped
+#   invalid characters are handled by a later pass
+#   this assumes that doing so will not change the
+#   parse result
+_escape = node('escape', 
+               ('open', literal('\\')),
+               ('value', item))
 
 _hexC = oneOf('0123456789abcdefABCDEF')
 
-_unic = app(lambda _, cs: unichr(int(''.join(cs), 16)),
-            string('\\u'),
-            cut('invalid hex escape sequence', all_([_hexC] * 4)))
+_unic = node('unicode escape',
+             ('open', string('\\u')),
+             ('value', cut('expected 4 hexidecimal digits', quantity(_hexC, 4))))
 
-jsonstring = addError('string',
-                      app(lambda _1, cs, _2: ''.join(cs),
-                          literal('"'),
-                          many0(any_([_char, _unic, _escape])),
-                          cut('expected "', literal('"'))))
+_jsonstring = node('string', 
+                   ('open', literal('"')), 
+                   ('value', many0(any_([_char, _unic, _escape]))), 
+                   ('close', cut('expected "', literal('"'))))
 
-_keywords = [('true', True), ('false', False), ('null', None)]
-
-keyword = any_([seq2R(string(s), pure(v)) for (s, v) in _keywords])
-
-
-# hack to allow mutual recursion of rules
-obj = error('unimplemented')
-array = error('unimplemented')
+_keyword = node('keyword', 
+                ('value', any_(map(string, ['true', 'false', 'null']))))
 
 def tok(parser):
     return seq2L(parser, whitespace)
 
+jsonstring, number, keyword = map(tok, [_jsonstring, _number, _keyword])
+
 os, cs, oc, cc, comma, colon = map(lambda x: tok(literal(x)), '[]{},:')
 
-value = any_([tok(jsonstring), tok(number), tok(keyword), obj, array])
 
+# a hack to allow mutual recursion of rules
+obj = error('unimplemented')
+array = error('unimplemented')
 
+value = any_([jsonstring, number, keyword, obj, array])
 
-def sepBy0(parser, separator):
-    return optional([], app(lambda x, xs: [x] + xs,
-                            parser,
-                            many0(seq2R(separator, parser))))
+def sepBy1_(message, p, sep):
+    return node('vals',
+                ('first', p),
+                ('rest', many0(node('pair',
+                                    ('sep', sep),
+                                    ('value', cut(message, p))))))
 
+def sepBy0_(message, p, sep):
+    v2 = seq2R(sep, cut(message, p))
+    parser = app(lambda x, ys: [x] + ys,
+                 p,
+                 many0(v2))
+    return plus(parser, pure([]))
 
-array.parse = addError('array',
-                       app(lambda _1, bs, _2: bs,
-                           os,
-                           sepBy0(value, comma),
-                           cut('expected ]', cs))).parse
+array.parse = node('array',
+                   ('open', os),
+                   ('values', sepBy0_('expected value', value, comma)),
+                   ('close', cut('expected ] or ,', cs))).parse
 
-keyVal = addError('key/value pair',
-                  app(lambda p, k, _, v: (p, k, v),
-                      getState,
-                      tok(jsonstring),
-                      cut('expected :', colon),
-                      cut('expected value', value)))
+keyVal = node('key/value pair',
+              ('key', jsonstring),
+              ('colon', cut('expected :', colon)),
+              ('value', cut('expected value', value)))
 
-def buildObject(pairs):
-    obj = {}
-    for (p, k, v) in pairs:
-        if obj.has_key(k):
-            return error([('duplicate key: ' + k, p)])
-        obj[k] = v
-    return pure(obj)
+obj.parse = node('object', 
+                 ('open', oc), 
+                 ('pairs', sepBy0_('expected key/value pair', keyVal, comma)), 
+                 ('close', cut('expected } or ,', cc))).parse
 
-obj.parse = addError('object',
-                     app(lambda _1, bs, _2: bs,
-                         oc,
-                         bind(sepBy0(keyVal, comma), buildObject),
-                         cut('expected }', cc))).parse
+_json = node('json',
+             ('value', value)) # plus(obj, array)),
 
-json = app(lambda _1, v, _2: v,
-           whitespace, 
-           plus(obj, array),
-           cut('unparsed input remaining', not0(item)))
+json = seq2L(seq2R(whitespace, _json),
+             cut('unparsed input remaining', not0(item)))

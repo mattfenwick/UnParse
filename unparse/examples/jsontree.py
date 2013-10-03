@@ -17,7 +17,7 @@
 #    join up string literal
 
 from ..maybeerror import MaybeError as Me
-from .ajson import json
+from .json import json
 from ..combinators import run
 
 def add_error(message, position, comp):
@@ -117,5 +117,10 @@ def t_value(node):
 def t_json(node):
     return t_value(node['value'])
 
-def full(x):
-    return run(json, x).bind(lambda r: t_json(r['result']))
+def full(input_string):
+    """
+    run parser over input, building CST, then 
+    run a tree traversal over CST, checking for
+    other kinds of errors
+    """
+    return run(json, input_string).bind(lambda r: t_json(r['result']))

@@ -36,26 +36,29 @@
 from .. import combinators as c
 
 
-(literal, satisfy, not1, _) = c.tokenBasic
+position = c.position
+(item, literal, satisfy) = (position.item, position.literal, position.satisfy)
+(oneOf, not1, string) = (position.oneOf, position.not1, position.string)
 
 
 comment = c.seq2R(literal(';'), c.many0(not1(literal('\n'))))
 
-WHITESPACE = set(' \t\n\r\f')
-whitespace = satisfy(lambda x: x in WHITESPACE)
+WHITESPACE = ' \t\n\r\f'
+whitespace = c.many0(c.oneOf(WHITESPACE))
 
 junk = c.plus(comment, whitespace)
 
 def tok(p):
     return c.seq2L(p, c.many0(junk))
 
-DIGITS = set('0123456789')
-number = c.many1(satisfy(lambda x: x in DIGITS))
+
+DIGITS = '0123456789'
+number = c.many1(c.oneOf(DIGITS))
 
 SYMBOLSTART = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_')
 symbol = c.app(lambda x, y: [x] + y,
-                    satisfy(lambda x: x in SYMBOLSTART),
-                    c.many0(satisfy(lambda x: x in SYMBOLSTART.union(DIGITS))))
+                    c.oneOf(SYMBOLSTART),
+                    c.many0(c.oneOf(SYMBOLSTART + DIGITS)))
 
 op = literal('(')
 cp = literal(')')
