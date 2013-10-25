@@ -32,59 +32,67 @@
 #   - discarding any whitespace and comments without a separate lexing pass
 #   - recursive grammar (must work around Python's non-let-rec binding)
 #   - concrete parse tree construction
+#   - position tracking (line/column)
+#   - error reporting -- stack of errors
 
-from .. import combinators as c
+from ..cst import (node, sepBy0, cut)
+from ..combinators import (position, seq2R, many0,
+                           error,    any_,  seq2L, not0,
+                           plus,     fmap,  many1, app)
 
-
-position = c.position
 (item, literal, satisfy) = (position.item, position.literal, position.satisfy)
 (oneOf, not1, string) = (position.oneOf, position.not1, position.string)
 
 
-comment = c.seq2R(literal(';'), c.many0(not1(literal('\n'))))
-
 WHITESPACE = ' \t\n\r\f'
-whitespace = c.many0(c.oneOf(WHITESPACE))
-
-junk = c.plus(comment, whitespace)
-
-def tok(p):
-    return c.seq2L(p, c.many0(junk))
-
-
 DIGITS = '0123456789'
-number = c.many1(c.oneOf(DIGITS))
+SYMBOLSTART = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
 
-SYMBOLSTART = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_')
-symbol = c.app(lambda x, y: [x] + y,
-                    c.oneOf(SYMBOLSTART),
-                    c.many0(c.oneOf(SYMBOLSTART + DIGITS)))
+_comment = seq2R(literal(';'), 
+                 many0(not1(literal('\n'))))
 
-op = literal('(')
-cp = literal(')')
-os = literal('[')
-cs = literal(']')
-oc = literal('{')
-cc = literal('}')
+_whitespace = oneOf(WHITESPACE)
 
+junk = many0(plus(_comment, _whitespace))
 
-app = c.error('unimplemented -- app')
-wlist = c.error('unimplemented -- list')
-special = c.error('unimplemented -- special')
+_number = node('number', 
+               ('digits', many1(oneOf(DIGITS))))
 
-form = c.any_([tok(symbol), tok(number), app, wlist, special])
+_symbol = node('symbol',
+               ('first', oneOf(SYMBOLSTART)),
+               ('rest', many0(oneOf(SYMBOLSTART + DIGITS))))
 
-app.parse = c.app(lambda _1, b, _2: b,
-                  tok(op),
-                  c.many1(form),
-                  tok(cp)).parse
+def tok(parser):
+    return seq2L(parser, junk)
 
-wlist.parse = c.app(lambda _1, b, _2: b,
-                    tok(os),
-                    c.many0(form),
-                    tok(cs)).parse
+op, cp, os, cs, oc, cc = [tok(literal(c)) for c in '()[]{}']
+symbol, number = map(tok, [_symbol, _number])
+# what about String?
 
-special.parse = c.app(lambda _1, b, _2: b,
-                      tok(oc),
-                      c.many0(form),
-                      tok(cc)).parse
+application = error('unimplemented -- application')
+wlist = error('unimplemented -- list')
+special = error('unimplemented -- special')
+
+form = any_([symbol, number, application, wlist, special])
+
+application.parse = node('application',
+                         ('open'     , op               ),
+                         ('operator' , cut('form', form)),
+                         ('arguments', many0(form)      ),
+                         ('close'    , cut(')', cp)     )).parse
+
+wlist.parse = node('list', 
+                   ('open'  , os          ), 
+                   ('values', many0(form) ),
+                   ('close' , cut(']', cs))).parse
+
+special.parse = node('special form',
+                     ('open'     , oc                   ),
+                     ('operator' , cut('symbol', symbol)),
+                     ('arguments', many0(form)          ),
+                     ('close'    , cut('}', cc)         )).parse
+
+woof = app(lambda _1, fs, _2: fs, 
+           junk,
+           many0(form),
+           cut('unparsed input remaining', not0(item)))

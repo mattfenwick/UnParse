@@ -82,11 +82,19 @@ def t_keyword(node):
     return Me.error([('invalid keyword', node['_pos'])])
 
 def t_array(node):
-    return add_error('array', node['_pos'], Me.app(lambda *args: list(args), *map(t_value, node['values'])))
+    print 'node: ', node
+    return add_error('array', 
+                     node['_pos'], 
+                     Me.app(lambda *args: list(args), # this may look super weird -- but it's for the error effects
+                            *map(t_value, node['body']['values'])))
 
 def t_pair(node):
-    return add_error('key/value pair', node['_pos'], 
-                     Me.app(lambda *args: args, t_string(node['key']), t_value(node['value']), Me.pure(node['_pos'])))
+    return add_error('key/value pair', 
+                     node['_pos'], 
+                     Me.app(lambda *args: args, 
+                            t_string(node['key']), 
+                            t_value(node['value']), 
+                            Me.pure(node['_pos'])))
 
 def t_build_object(pairs):
     obj = {}
@@ -100,15 +108,17 @@ def t_build_object(pairs):
 
 def t_object(node):
     # this is really silly.  it should be something like a fold instead
-    return add_error('object', node['_pos'],
-                     Me.app(lambda *args: list(args), *map(t_pair, node['pairs'])).bind(t_build_object))
+    return add_error('object', 
+                     node['_pos'],
+                     Me.app(lambda *args: list(args), 
+                            *map(t_pair, node['body']['values'])).bind(t_build_object))
 
 _values = {
     'keyword': t_keyword,
-    'number': t_number,
-    'string': t_string,
-    'array': t_array,
-    'object': t_object
+    'number' : t_number ,
+    'string' : t_string ,
+    'array'  : t_array  ,
+    'object' : t_object
 }
 
 def t_value(node):
@@ -123,4 +133,6 @@ def full(input_string):
     run a tree traversal over CST, checking for
     other kinds of errors
     """
-    return run(json, input_string).bind(lambda r: t_json(r['result']))
+    cst = run(json, input_string)
+    print cst
+    return cst.bind(lambda r: t_json(r['result']))
