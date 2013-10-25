@@ -4,11 +4,11 @@
 # Form  :=  App     |  Special  |  List    |  
 #           Symbol  |  Number   |  String
 #
-# App   :=  '('  Form(+)  ')'
+# App      :=  '('  Form(+)  ')'
 #
-# Special  :=  '{'  Form(*)  '}'
+# Special  :=  '{'  Symbol  Form(*)  '}'
 #
-# List  :=  '['  Form(*)  ']'
+# List     :=  '['  Form(*)  ']'
 #
 # Symbol   :=  [a-zA-Z_]  [a-zA-Z_0-9](*)
 #
@@ -44,9 +44,10 @@ from ..combinators import (position, seq2R, many0,
 (oneOf, not1, string) = (position.oneOf, position.not1, position.string)
 
 
-WHITESPACE = ' \t\n\r\f'
-DIGITS = '0123456789'
+WHITESPACE  = ' \t\n\r\f'
+DIGITS      = '0123456789'
 SYMBOLSTART = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_'
+ESCAPES     = '\\"'
 
 _comment = seq2R(literal(';'), 
                  many0(not1(literal('\n'))))
@@ -62,18 +63,29 @@ _symbol = node('symbol',
                ('first', oneOf(SYMBOLSTART)),
                ('rest', many0(oneOf(SYMBOLSTART + DIGITS))))
 
+_char = node('char',
+             ('value', not1(oneOf(ESCAPES))))
+
+_escape = node('escape',
+               ('open', literal('\\')),
+               ('value', cut('\\ or double-quote', oneOf(ESCAPES))))
+
+_string = node('string',
+               ('open', literal('"')),
+               ('body', many0(plus(_char, _escape))),
+               ('close', cut('double-quote', literal('"'))))
+
 def tok(parser):
     return seq2L(parser, junk)
 
 op, cp, os, cs, oc, cc = [tok(literal(c)) for c in '()[]{}']
-symbol, number = map(tok, [_symbol, _number])
-# what about String?
+symbol, number, string = map(tok, [_symbol, _number, _string])
 
 application = error('unimplemented -- application')
-wlist = error('unimplemented -- list')
-special = error('unimplemented -- special')
+wlist       = error('unimplemented -- list')
+special     = error('unimplemented -- special')
 
-form = any_([symbol, number, application, wlist, special])
+form = any_([symbol, number, string, application, wlist, special])
 
 application.parse = node('application',
                          ('open'     , op               ),
