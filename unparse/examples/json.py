@@ -34,20 +34,31 @@ whitespace = many0(oneOf(' \t\n\r'))
 
 _digits = many1(oneOf('0123456789'))
 
-_decimal = seq2R(literal('.'), 
-                 cut('digits', _digits))
+_decimal = node('decimal',
+                ('dot', literal('.')),
+                ('digits', cut('digits', _digits)))
 
 _exponent = node('exponent', 
                  ('letter', oneOf('eE')), 
                  ('sign', optional('+', oneOf('+-'))),
-                 ('power', cut('exponent power', _digits)))
+                 ('power', cut('power', _digits)))
 
-_number = node('number', 
-               ('integer', plus(_digits, 
-                                all_([literal('-'), 
-                                      cut('digits', _digits)]))),
-               ('decimal', optional(None, _decimal)),
-               ('exponent', optional(None, _exponent)))
+
+_number_1 = node('number', 
+                 ('sign', literal('-')),
+                 ('integer', cut('digits', _digits)),
+                 ('decimal', optional(None, _decimal)),
+                 ('exponent', optional(None, _exponent)))
+
+_number_2 = node('number', 
+                 ('sign', pure(None)),
+                 ('integer', _digits),
+                 ('decimal', optional(None, _decimal)),
+                 ('exponent', optional(None, _exponent)))
+
+# there are two number patterns solely to get the error reporting right
+#   if there's a `-` but a number can't be parsed, that's an error
+_number = plus(_number_1, _number_2)
 
 _char = node('character',
              ('value', not1(oneOf('\\"'))))
@@ -64,7 +75,7 @@ _hexC = oneOf('0123456789abcdefABCDEF')
 
 _unic = node('unicode escape',
              ('open', string('\\u')),
-             ('value', cut('4 hexidecimal digits', quantity(_hexC, 4))))
+             ('value', cut('4 hexadecimal digits', quantity(_hexC, 4))))
 
 _jsonstring = node('string', 
                    ('open', literal('"')), 
@@ -95,7 +106,7 @@ array.parse = node('array',
 
 keyVal = node('key/value pair',
               ('key', jsonstring),
-              ('colon', cut(':', colon)),
+              ('colon', cut('colon', colon)),
               ('value', cut('value', value)))
 
 obj.parse = node('object', 

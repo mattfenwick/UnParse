@@ -10,16 +10,18 @@ l = c.ConsList
 def good(rest, state, result):
     return m.pure({'rest': rest, 'state': state, 'result': result})
 
-(lit1, sat1, not11, str1) = c.tokenPrimitives(c.itemBasic)
-(lit2, sat2, not12, str2) = c.tokenPrimitives(c.itemPosition)
+iz1 = c.basic
+(item1, lit1, sat1, not11, str1) = iz1.item, iz1.literal, iz1.satisfy, iz1.not1, iz1.string
+iz2 = c.position
+(item2, lit2, sat2, not12, str2) = iz2.item, iz2.literal, iz2.satisfy, iz2.not1, iz2.string
 
 
 
 class BasicTokens(u.TestCase):
 
     def testItemBasic(self):
-        self.assertEqual(m.zero, c.itemBasic.parse(l(''), None))
-        self.assertEqual(good(l('bcdef'), None, 'a'), c.itemBasic.parse(l('abcdef'), None))
+        self.assertEqual(m.zero, item1.parse(l(''), None))
+        self.assertEqual(good(l('bcdef'), None, 'a'), item1.parse(l('abcdef'), None))
 
     def testLiteral(self):
         val = lit1(3)
@@ -52,9 +54,9 @@ class BasicTokens(u.TestCase):
 class CountTokens(u.TestCase):
 
     def testItemPosition(self):
-        self.assertEqual(m.zero, c.itemPosition.parse(l(''), (1,1)))
-        self.assertEqual(good(l('bcdef'), (1,2), 'a'), c.itemPosition.parse(l('abcdef'), (1,1)))
-        self.assertEqual(good(l('bcdef'), (2,1), '\n'), c.itemPosition.parse(l('\nbcdef'), (1,1)))
+        self.assertEqual(m.zero, item2.parse(l(''), (1,1)))
+        self.assertEqual(good(l('bcdef'), (1,2), 'a'), item2.parse(l('abcdef'), (1,1)))
+        self.assertEqual(good(l('bcdef'), (2,1), '\n'), item2.parse(l('\nbcdef'), (1,1)))
 
     def testLiteral(self):
         val = lit2('3')
@@ -97,7 +99,7 @@ class TestParser(u.TestCase):
         self.assertEqual(good('abc', 2, 3), val)
     
     def testBind(self):
-        two = c.bind(c.itemBasic, lambda x: lit1(x))
+        two = c.bind(item1, lambda x: lit1(x))
         self.assertEqual(two.parse(l('abcde'), {}), m.zero)
         self.assertEqual(two.parse(l('aabcde'), {}), good(l('bcde'), {}, 'a'))
 
@@ -166,12 +168,12 @@ class TestParser(u.TestCase):
         self.assertEqual(val.parse(l([3,3,4,5]), {}), good(l([4,5]), {}, [3,3]))
     
     def testAll(self):
-        val = c.all_([c.itemBasic, lit1(2), lit1(8)])
+        val = c.all_([item1, lit1(2), lit1(8)])
         self.assertEqual(val.parse(l([3,2,4]), {}), m.zero)
         self.assertEqual(val.parse(l([3,2,8,16]), {}), good(l([16]), {}, [3,2,8]))
     
     def testApp(self):
-        parser = c.app(lambda x,y,z: x + y * z, c.itemBasic, sat1(lambda x: x > 2), c.itemBasic)
+        parser = c.app(lambda x,y,z: x + y * z, item1, sat1(lambda x: x > 2), item1)
         v1 = parser.parse(l([1,2,3,4,5]), 'hi')
         self.assertEqual(m.zero, v1)
         v2 = parser.parse(l([5,6,7,8,9]), 'bye')

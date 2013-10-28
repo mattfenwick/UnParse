@@ -16,6 +16,14 @@ error = maybeerror.MaybeError.error
 
 l = combinators.ConsList
 
+def cst(type_, pos, **kwargs):
+    kwargs['_type'] = type_
+    kwargs['_pos'] = pos
+    return kwargs
+
+def my_object(pos, seps, vals):
+    return cst('object', pos, open='{', close='}', body={'separators': seps, 'values': vals})
+    
 #
 # Value   :=  'false'  |  'null'  |  'true'  |  Object  |  Array  |  Number  |  String
 # 
@@ -37,20 +45,250 @@ l = combinators.ConsList
 class TestJson(unittest.TestCase):
     
     def testInteger(self):
-        inp = '839001 abc'
-        self.assertEqual(good(l(inp[6:]), (1,7), 839001), number.parse(l(inp), (1,1)))
-        inp2 = '-7777 abc'
-        self.assertEqual(good(l(inp2[5:]), (1,6), -7777), number.parse(l(inp2), (1,1)))
-        self.assertEqual(good(l('abc'), (1,2), 0), number.parse(l('0abc'), (1,1)))
-        self.assertEqual(good(l('abc'), (1,3), 0), number.parse(l('-0abc'), (1,1)))
+        inp = '83 abc'
+        self.assertEqual(good(l(inp[3:]), 
+                              (1,4), 
+                              cst('number', 
+                                  (1,1), 
+                                  sign=None, 
+                                  integer=['8', '3'], 
+                                  exponent=None, 
+                                  decimal=None)), 
+                         number.parse(l(inp), (1,1)))
+        inp2 = '-77 abc'
+        self.assertEqual(good(l(inp2[4:]), 
+                              (1,5), 
+                              cst('number', 
+                                  (1,1),
+                                  sign='-',
+                                  integer=['7', '7'],
+                                  exponent=None,
+                                  decimal=None)), 
+                         number.parse(l(inp2), (1,1)))
         
-    def testDecimal(self):
-        inp = '839.001 abc'
-        self.assertEqual(good(l(inp[7:]), (1,8), 839.001), number.parse(l(inp), (1,1)))
-        inp2 = '-77e77 abc'
-        self.assertEqual(good(l(inp2[6:]), (1,7), -7.7e78), number.parse(l(inp2), (1,1)))
-        self.assertEqual(good(l('abc'), (1,4), 0), number.parse(l('0e2abc'), (1,1)))
-        self.assertEqual(good(l('abc'), (1,7), 0), number.parse(l('-0.000abc'), (1,1)))
+    def testDecimalAndExponent(self):
+        inp = '-8.1e+2 abc'
+        self.assertEqual(good(l(inp[8:]), (1,9), 
+                              cst('number', (1,1),
+                                  sign='-',
+                                  integer=['8'],
+                                  decimal=cst('decimal', (1,3),
+                                              dot='.',
+                                              digits=['1']),
+                                  exponent=cst('exponent', (1,5),
+                                               letter='e',
+                                               sign='+',
+                                               power=['2']))), 
+                         number.parse(l(inp), (1,1)))
+        inp2 = '-8.1 abc'
+        self.assertEqual(good(l(inp2[5:]), (1,6), 
+                              cst('number', (1,1),
+                                  sign='-',
+                                  integer=['8'],
+                                  decimal=cst('decimal', (1,3),
+                                              dot='.',
+                                              digits=['1']),
+                                  exponent=None)), 
+                         number.parse(l(inp2), (1,1)))
+        inp3 = '-8e+2 abc'
+        self.assertEqual(good(l(inp3[6:]), (1,7), 
+                              cst('number', (1,1),
+                                  sign='-',
+                                  integer=['8'],
+                                  decimal=None,
+                                  exponent=cst('exponent', (1,3),
+                                               letter='e',
+                                               sign='+',
+                                               power=['2']))), 
+                         number.parse(l(inp3), (1,1)))
+
+    def testNumberMessedUpExponent(self):
+        self.assertEqual(error([('number', (1,1)), ('exponent', (1,2)), ('power', (1,3))]), 
+                         number.parse(l('0e abc'), (1,1)))
+
+    def testLoneMinusSign(self):
+        self.assertEqual(error([('number', (1,1)), ('digits', (1,2))]), 
+                         number.parse(l('-abc'), (1,1)))
+        
+    def testEmptyString(self):
+        inp = '"" def'
+        self.assertEqual(good(l(inp[3:]), (1,4), cst('string', (1,1), open='"', close='"', value=[])), 
+                         jsonstring.parse(l(inp), (1,1)))
+
+    def testString(self):
+        inp = '"abc" def'
+        chars = [
+            cst('character', (1,2), value='a'),
+            cst('character', (1,3), value='b'),
+            cst('character', (1,4), value='c')
+        ]
+        val = cst('string', (1,1), open='"', close='"', value=chars)
+        self.assertEqual(good(l(inp[6:]), (1,7), val), jsonstring.parse(l(inp), (1,1)))
+    
+    def testStringBasicEscape(self):
+        inp = '"a\\b\\nc" def'
+        chars = [
+            cst('character', (1,2), value='a'),
+            cst('escape', (1,3), open='\\', value='b'),
+            cst('escape', (1,5), open='\\', value='n'),
+            cst('character', (1,7), value='c')
+        ]
+        val = cst('string', (1,1), open='"', close='"', value=chars)
+        self.assertEqual(good(l(inp[9:]), (1,10), val), jsonstring.parse(l(inp), (1,1)))
+
+    def testStringEscapeSequences(self):
+        inp = '"\\"\\\\\\/\\b\\f\\n\\r\\t" def'
+        chars = [
+            cst('escape', (1,2), open='\\', value='"'),
+            cst('escape', (1,4), open='\\', value='\\'),
+            cst('escape', (1,6), open='\\', value='/'),
+            cst('escape', (1,8), open='\\', value='b'),
+            cst('escape', (1,10), open='\\', value='f'),
+            cst('escape', (1,12), open='\\', value='n'),
+            cst('escape', (1,14), open='\\', value='r'),
+            cst('escape', (1,16), open='\\', value='t'),
+        ]
+        val = cst('string', (1,1), open='"', close='"', value=chars)
+        self.assertEqual(good(l(inp[19:]), (1,20), val), jsonstring.parse(l(inp), (1,1)))
+    
+    def testStringUnicodeEscape(self):
+        inp = '"a\\u0044n\\uabcdc" def'
+        chars = [
+            cst('character', (1,2), value='a'),
+            cst('unicode escape', (1,3), open='\\u', value=['0','0','4','4']),
+            cst('character', (1,9), value='n'),
+            cst('unicode escape', (1,10), open='\\u', value=['a','b','c','d']),
+            cst('character', (1,16), value='c')
+        ]
+        val = cst('string', (1,1), open='"', close='"', value=chars)
+        self.assertEqual(good(l(inp[18:]), (1,19), val), jsonstring.parse(l(inp), (1,1)))
+
+    def testPunctuation(self):
+        cases = [['{ abc', oc],
+                 ['} abc', cc],
+                 ['[ abc', os],
+                 ['] abc', cs],
+                 [', abc', comma],
+                 [': abc', colon]]
+        for (inp, parser) in cases:
+            print inp
+            self.assertEqual(good(l(inp[2:]), (1,3), inp[0]), parser.parse(l(inp), (1,1)))
+
+    def testKeyword(self):
+        self.assertEqual(good(l('abc'), (1,6), cst('keyword', (1,1), value='true')), 
+                         keyword.parse(l('true abc'), (1,1)))
+        self.assertEqual(good(l('abc'), (1,7), cst('keyword', (1,1), value='false')), 
+                         keyword.parse(l('false abc'), (1,1)))
+        self.assertEqual(good(l('abc'), (1,6), cst('keyword', (1,1), value='null')), 
+                         keyword.parse(l('null abc'), (1,1)))
+        
+    def testKeyVal(self):
+        chars = [
+            cst('character', (1,2), value='q'),
+            cst('character', (1,3), value='r'),
+            cst('character', (1,4), value='s')
+        ]
+        self.assertEqual(good(l('abc'), 
+                              (2,9),
+                              cst('key/value pair', 
+                                  (1,1),
+                                  key=cst('string', (1,1), open='"', close='"', value=chars),
+                                  colon=':',
+                                  value=cst('keyword', (2,4), value='true'))), 
+                         keyVal.parse(l('"qrs"\n : true abc'), (1,1)))
+        
+    def testKeyValueMissingColon(self):
+        self.assertEqual(error([('key/value pair', (1,1)), ('colon', (1,6))]),
+                         keyVal.parse(l('"qrs"} abc'), (1,1)))
+        
+    def testKeyValueMissingValue(self):
+        self.assertEqual(error([('key/value pair', (1,1)), ('value', (1,10))]),
+                         keyVal.parse(l('"qrs" :  abc'), (1,1)))
+
+    def testObject(self):
+        self.assertEqual(good(l('abc'), (1,4), my_object((1,1), [], [])), 
+                         obj.parse(l('{} abc'), (1,1)))
+        self.assertEqual(good(l('abc'), 
+                              (1,12), 
+                              my_object((1,1), [], 
+                                        [cst('key/value pair', 
+                                             (1,2),
+                                             colon=':',
+                                             key=cst('string', (1,2), open='"', close='"', value=[]),
+                                             value=cst('keyword', (1,6), value='null'))])), 
+                         obj.parse(l('{"": null} abc'), (1,1)))
+
+    def testUnclosedObject(self): 
+        e = error([('object', (1,1)), ('close', (1,12))])
+        self.assertEqual(e, obj.parse(l('{"a": null '), (1,1)))
+        self.assertEqual(e, obj.parse(l('{"a": null ,'), (1,1)))
+        self.assertEqual(e, obj.parse(l('{"a": null ]'), (1,1)))
+
+    def testArray(self):
+        self.assertEqual(good(l('abc'), (1,4), 
+                              cst('array', (1,1), open='[', close=']', 
+                                  body={'values': [], 'separators': []})), 
+                         array.parse(l('[] abc'), (1,1)))
+        self.assertEqual(good(l([]), (1,7), 
+                              cst('array', (1,1), open='[', close=']',
+                                  body={'values': [cst('keyword', (1,2), value='true')],
+                                        'separators': []})), 
+                         array.parse(l('[true]'), (1,1)))
+        self.assertEqual(good(l([]), (1,13), 
+                              cst('array', (1,1), open='[', close=']',
+                                  body={'values': [
+                                            cst('keyword', (1,2), value='true'),
+                                            cst('keyword', (1,7), value='false')
+                                        ], 
+                                        'separators': [',']})), 
+                         array.parse(l('[true,false]'), (1,1)))
+
+    def testUnclosedArray(self):
+        self.assertEqual(error([('array', (1,1)), ('close', (1,5))]), 
+                         array.parse(l('[2,3'), (1,1)))
+
+    def testJson(self):
+        self.assertEqual(good(l([]), 
+                              (2,1), 
+                              cst('json', (1,1), value=my_object((1,1), [], []))),
+                         json.parse(l('{  }  \n'), (1,1)))
+    
+    def testUnclosedString(self):
+        self.assertEqual(error([('string', (1,1)), ('double-quote', (1,5))]), jsonstring.parse(l('"abc'), (1,1)))
+
+    def testStringBadUnicodeEscape(self):
+        stack = [('string', (1,1)), ('unicode escape', (1,3)), ('4 hexadecimal digits', (1,5))]
+        self.assertEqual(error(stack), 
+                         jsonstring.parse(l('"2\\uabch1" def'), (1,1)))
+        self.assertEqual(error(stack), 
+                         jsonstring.parse(l('"?\\uab" def'), (1,1)))
+    
+    def testTrailingJunk(self):
+        self.assertEqual(error([('unparsed input remaining', (1,4))]), json.parse(l('{} &'), (1,1)))
+
+notyet = '''
+    # errors
+
+    def testJSONBadInputType(self): # should be unicode or something according to spec
+        self.assertEqual(False)
+'''
+movetojsontree = '''
+
+    def testStringControlCharacter(self):
+        inp = '"a\n" def'
+        self.assertEqual(error([('string', (1,1)), ('illegal control character', (1,3))]), jsonstring.parse(l(inp), (1,1)))
+        
+    def testStringBadEscape(self):
+        self.assertEqual(error([('string', (1,1)), ('illegal escape', (1,4))]), 
+                         jsonstring.parse(l('"f\\qa" abc'), (1,1)))
+
+    def testObjectDuplicateKeys(self):
+        self.assertEqual(error([('object', (1,1)), ('duplicate key: a', (2,1))]), 
+                         obj.parse(l('{"a": 2,\n"a": 3}'), (1,1)))
+
+    def testObjectDuplicateKeysWithEscape(self):
+        self.assertEqual(error([('object', (1,1)), ('duplicate key: A', (2,1))]), 
+                         obj.parse(l('{"A": 2,\n"\\u0041": 3}'), (1,1)))
 
     def testNumberTooBig(self): # just applies to decimals, or ints too?
         self.assertEqual(error([('number', (1,1)), ('floating-point overflow', (1,14))]), 
@@ -65,117 +303,6 @@ class TestJson(unittest.TestCase):
         self.assertEqual(error([('number', (1,1)), ('leading 0', (1,5))]), 
                          number.parse(l('-001 abc'), (1,1)))
     
-    def testNumberMessedUpExponent(self):
-        self.assertEqual(error([('number', (1,1)), ('expected exponent', (1,3))]), 
-                         number.parse(l('0e abc'), (1,1)))
-
-    def testLoneMinusSign(self):
-        self.assertEqual(error([('number', (1,1)), ('expected digits', (1,2))]), 
-                         number.parse(l('-abc'), (1,1)))
-        
-    def testEmptyString(self):
-        inp = '"" def'
-        self.assertEqual(good(l(inp[2:]), (1,3), ''), jsonstring.parse(l(inp), (1,1)))
-
-    def testString(self):
-        inp = '"abc" def'
-        self.assertEqual(good(l(inp[5:]), (1,6), 'abc'), jsonstring.parse(l(inp), (1,1)))
-    
-    def testStringBasicEscape(self):
-        inp = '"a\\b\\nc" def'
-        self.assertEqual(good(l(inp[8:]), (1,9), 'a\b\nc'), jsonstring.parse(l(inp), (1,1)))
-
-    def testStringEscapeSequences(self):
-        inp = '"\\"\\\\\\/\\b\\f\\n\\r\\t" def'
-        self.assertEqual(good(l(inp[18:]), (1,19), '"\\/\b\f\n\r\t'), jsonstring.parse(l(inp), (1,1)))
-    
-    def testStringUnicodeEscape(self):
-        inp = '"a\\u0044n\\uabcdc" def'
-        self.assertEqual(good(l(inp[17:]), (1,18), u'aDn\uabcdc'), jsonstring.parse(l(inp), (1,1)))
-
-    def testPunctuation(self):
-        cases = [['{ abc', oc],
-                 ['} abc', cc],
-                 ['[ abc', os],
-                 ['] abc', cs],
-                 [', abc', comma],
-                 [': abc', colon]]
-        for (inp, parser) in cases:
-            print inp
-            self.assertEqual(good(l(inp[2:]), (1,3), inp[0]), parser.parse(l(inp), (1,1)))
-
-    def testKeyword(self):
-        self.assertEqual(good(l(' abc'), (1,5), True), keyword.parse(l('true abc'), (1,1)))
-        self.assertEqual(good(l(' abc'), (1,6), False), keyword.parse(l('false abc'), (1,1)))
-        self.assertEqual(good(l(' abc'), (1,5), None), keyword.parse(l('null abc'), (1,1)))
-        
-    def testKeyVal(self):
-        self.assertEqual(good(l('abc'), (2,6), ((1,1), 'qrs', 3)),
-                         keyVal.parse(l('"qrs"\n : 3 abc'), (1,1)))
-        
-    def testKeyValueMissingColon(self):
-        self.assertEqual(error([('key/value pair', (1,1)), ('expected :', (1,6))]),
-                         keyVal.parse(l('"qrs"} abc'), (1,1)))
-        
-    def testKeyValueMissingValue(self):
-        self.assertEqual(error([('key/value pair', (1,1)), ('expected value', (1,10))]),
-                         keyVal.parse(l('"qrs" :  abc'), (1,1)))
-
-    def testObject(self):
-        self.assertEqual(good(l('abc'), (1,4), {}), obj.parse(l('{} abc'), (1,1)))
-        self.assertEqual(good(l('abc'), (1,9), {'': 3}), obj.parse(l('{"": 3} abc'), (1,1)))
-        self.assertEqual(good(l([]), (1,12), {'a': None}), obj.parse(l('{"a": null}'), (1,1)))
-        inp = '{"abc": 123, "def": 456}, null abc'
-        self.assertEqual(good(l(inp[24:]), (1,25), {'abc': 123, 'def': 456}), obj.parse(l(inp), (1,1)))
-
-    def testObjectDuplicateKeys(self):
-        self.assertEqual(error([('object', (1,1)), ('duplicate key: a', (2,1))]), 
-                         obj.parse(l('{"a": 2,\n"a": 3}'), (1,1)))
-
-    def testObjectDuplicateKeysWithEscape(self):
-        self.assertEqual(error([('object', (1,1)), ('duplicate key: A', (2,1))]), 
-                         obj.parse(l('{"A": 2,\n"\\u0041": 3}'), (1,1)))
-
-    def testUnclosedObject(self): 
-        e = error([('object', (1,1)), ('expected }', (1,12))])
-        self.assertEqual(e, obj.parse(l('{"a": null '), (1,1)))
-        self.assertEqual(e, obj.parse(l('{"a": null ,'), (1,1)))
-        self.assertEqual(e, obj.parse(l('{"a": null ]'), (1,1)))
-
-    def testArray(self):
-        self.assertEqual(good(l('abc'), (1,4), []), array.parse(l('[] abc'), (1,1)))
-        self.assertEqual(good(l([]), (1,7), [True]), array.parse(l('[true]'), (1,1)))
-        inp = '["abc", 123], null abc'
-        self.assertEqual(good(l(inp[12:]), (1,13), ['abc', 123]), array.parse(l(inp), (1,1)))
-
-    def testUnclosedArray(self):
-        self.assertEqual(error([('array', (1,1)), ('expected ]', (1,5))]), 
-                         array.parse(l('[2,3'), (1,1)))
-
-    def testJson(self):
-        self.assertEqual(good(l([]), (3,1), {'abc': [True, None], 'def': 32}), 
-                         json.parse(l('{ "abc" : [ true , null ] , \n "def": 32 }  \n'), (1,1)))
-    
-    def testStringControlCharacter(self):
-        inp = '"a\n" def'
-        self.assertEqual(error([('string', (1,1)), ('illegal control character', (1,3))]), jsonstring.parse(l(inp), (1,1)))
-
-    def testUnclosedString(self):
-        self.assertEqual(error([('string', (1,1)), ('expected "', (1,5))]), jsonstring.parse(l('"abc'), (1,1)))
-
-    def testStringBadEscape(self):
-        self.assertEqual(error([('string', (1,1)), ('illegal escape', (1,4))]), jsonstring.parse(l('"f\\qa" abc'), (1,1)))
-
-    def testStringBadUnicodeEscape(self):
-        self.assertEqual(error([('string', (1,1)), ('invalid hex escape sequence', (1,5))]), jsonstring.parse(l('"2\\uabch1" def'), (1,1)))
-        self.assertEqual(error([('string', (1,1)), ('invalid hex escape sequence', (1,4))]), jsonstring.parse(l('"\\uab" def'), (1,1)))
-    
-    def testTrailingJunk(self):
-        self.assertEqual(error([('unparsed input remaining', (1,4))]), json.parse(l('{} &'), (1,1)))
-
-notyet = '''
-    # errors
-
-    def testJSONBadInputType(self): # should be unicode or something according to spec
-        self.assertEqual(False)
 '''
+
+
