@@ -51,7 +51,7 @@ _number_1 = node('number',
                  ('exponent', optional(None, _exponent)))
 
 _number_2 = node('number', 
-                 ('sign', pure(None)),
+                 ('sign', pure(None)), # this is to make the result match the schema of _number_1's result
                  ('integer', _digits),
                  ('decimal', optional(None, _decimal)),
                  ('exponent', optional(None, _exponent)))
