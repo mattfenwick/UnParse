@@ -55,61 +55,72 @@ _id_key_null_bool = node('identifier',
                          ('rest', many0(oneOf(REST))))
 
 
-_decimal_int = node('decimal integer',
-                    ('first', oneOf('123456789')),
-                    ('rest', many0(oneOf('0123456789_'))))
-
-_hex_int = node('hex int',
-                ('zero', literal('0')),
-                ('x', oneOf('xX')),
-                ('numeral', many1(oneOf('0123456789abcdefABCDEF_'))))
-
-_octal_int = node('octal int',
-                  ('zero', literal('0')),
-                  ('numeral', many1(oneOf('01234567_'))))
-
-_binary_int = node('binary int', 
-                   ('zero', literal('0')),
-                   ('b', oneOf('bB')),
-                   ('numberal', many1(oneOf('01_'))))
-
-_integer_literal = node('integer',
-                        ('numeral', any_([_decimal_int, _hex_int, _octal_int, _binary_int])),
-                        ('type suffix', optional(None, oneOf('lL'))))
-
 _digits = node('digits',
                ('first', oneOf('0123456789')),
                ('rest', many0(oneOf('0123456789_'))))
 
-_float_suffix = oneOf('fFdD')
-
 _exponent = node('exponent', 
                  ('e'      , oneOf('eE')),
-                 ('sign'   , oneOf('+-')),
+                 ('sign'   , optional(None, oneOf('+-'))),
                  ('numeral', _digits))
 
-_decimal_fp = ???????????????????????????????????????
-DecimalFP:
-    Digits  '.'  Digits(?)  Exponent(?)  FloatSuffix(?)
-            '.'  Digits     Exponent(?)  FloatSuffix(?)
-    Digits                  Exponent     FloatSuffix(?)
-    Digits                               FloatSuffix
+_num_8_10 = node('int8/10',
+                 ('integer' , _digits),
+                 ('dot'     , optional(None, literal('.'))),
+                 ('decimal' , optional(None, _digits)),
+                 ('exponent', optional(None, _exponent)))
 
-HexFP:
-    '0'  [xX]  HexDigits(?)  '.'     HexDigits  BinaryExponent  FloatSuffix(?)
-    '0'  [xX]  HexDigits     '.'(?)             BinaryExponent  FloatSuffix(?)
+_num_8_10_dot = node('int8/10',
+                     ('integer' , pure(None)),
+                     ('dot'     , literal('.')),
+                     ('decimal' , _digits),
+                     ('exponent', optional(None, _exponent)))
+
+_hex_digit = oneOf('0123456789abcdefABCDEF_')
 
 _binary_exponent = node('binary exponent', 
-                        ('p', oneOf('pP')),
-                        ('sign', optional(None, oneOf('-+'))),
+                        ('p'      , oneOf('pP')),
+                        ('sign'   , optional(None, oneOf('-+'))),
                         ('numeral', _digits))
-BinaryExponent:
-    [pP]  [+-](?)  Digits
+_num_16 = node('int16',
+               ('zero'    , literal('0')),
+               ('x'       , oneOf('xX')),
+               ('integer' , many0(_hex_digit)),
+               ('dot'     , optional(None, literal('.'))),
+               ('decimal' , many0(_hex_digit)),
+               ('exponent', _binary_exponent))
 
-_fp_literal = plus(_decimal_fp, _hex_fp)
+_num_2 = node('int2', 
+              ('zero', literal('0')),
+              ('b', oneOf('bB')),
+              ('numeral', many1(oneOf('01_'))))
 
-_literal = any_([_integer_literal,
-                 _fp_literal,
+_num_literal = node('number',
+                    ('numeral', any_([_num_2, _num_16, _num_8_10, _num_8_10_dot])),
+                    ('type'   , optional(None, oneOf('fFdDlL'))))
+
+_single = not1(oneOf("'\\"))
+
+_escape = node('escape',
+               ('open', literal('\\')),
+               ('value', oneOf('btnfr"\'\\')))
+
+_octal_escape = node('octal escape',
+                     ('open', literal('\\')),
+                     ('value', plus(all_([oneOf('0123'), oneOf('01234567'), oneOf('01234567')]), 
+                                    all_([oneOf('01234567'), optional(None, oneOf('01234567'))]))))
+
+_char_literal = node('char',
+                     ('open', literal("'")),
+                     ('value', any_([_single, _escape, _octal_escape])),
+                     ('close', literal("'")))
+
+_string_literal = node('string',
+                       ('open', literal('"')),
+                       ('value', many0(any_([_single, _escape, _octal_escape]))),
+                       ('close', literal('"')))
+
+_literal = any_([_num_literal,
                  _char_literal,
                  _string_literal])
 
