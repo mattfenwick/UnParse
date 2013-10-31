@@ -233,21 +233,23 @@ def optional(parser, default=None):
     '''
     return plus(parser, pure(default))
 
+def _first(x, _):
+    return x
+
+def _second(_, y):
+    return y
+
 def seq2L(self, other):
     '''
     Parser e s (m t) a -> Parser e s (m t) b -> Parser e s (m t) a
     '''
-    def f(x):
-        return x[0]
-    return fmap(f, all_([self, other]))
+    return app(_first, self, other)
 
 def seq2R(self, other):
     '''
     Parser e s (m t) a -> Parser e s (m t) b -> Parser e s (m t) b
     '''
-    def g(x):
-        return x[1]
-    return fmap(g, all_([self, other]))
+    return app(_second, self, other)
 
 def lookahead(parser):
     '''
