@@ -50,9 +50,9 @@ _comment = plus(_long_comment, _short_comment)
 FIRST = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$'
 REST = FIRST + '0123456789'
 
-_id_key_null_bool = node('identifier',
-                         ('first', oneOf(FIRST)),
-                         ('rest', many0(oneOf(REST))))
+_identifier = node('identifier',
+                   ('first', oneOf(FIRST)),
+                   ('rest', many0(oneOf(REST))))
 
 
 _digits = node('digits',
@@ -124,26 +124,28 @@ _literal = any_([_num_literal,
                  _char_literal,
                  _string_literal])
 
-####################
+SEPARATORS = ['(', ')', '{', '}', '[', ']', ';', ',', '.']
 
-_some_garbage = '''
-Input:
-    InputElement(*)  Sub(?)
+OPERATORS = [
+    '='  , '>'  , '<' , '!' , '~'  , '?' , ':'  ,
+    '==' , '<=' , '>=', '!=', '&&' , '||', '++' ,
+    '--' , '+'  , '-' , '*' , '/'  , '&' , '|'  ,
+    '^'  , '%'  , '<<', '>>', '>>>', '+=', '-=' ,
+    '*=' , '/=' , '&=', '|=', '^=' , '%=', '<<=',
+    '>>=', '>>>=']
 
-InputElement:
-    WhiteSpace
-    Comment
-    Token
+OTHERS = ['...', '@']
 
-Token:
-    IdentifierOrKeywordOrNullOrBoolean
-    Literal
-    Separator
-    Operator
-    '@'
-    '...'
+# what about position of _other, _separator, and _operator?
+_other = any_(map(string, OTHERS))
 
-Sub:
-    the ASCII SUB character, also known as "control-Z"
+_separator = any_(map(literal, SEPARATORS))
 
-'''
+_operator = any_(map(string, OPERATORS))
+
+# are these in the right order?  i.e. `...` needs to be before `.`
+_token = any_([_identifier, _literal, _other, _separator, _operator])
+
+_input_element = any_([_whitespace, _comment, _token])
+
+_input = many0(_input_element) # what about the optional trailing `Sub`?
