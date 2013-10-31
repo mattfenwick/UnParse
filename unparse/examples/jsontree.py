@@ -60,7 +60,8 @@ def t_number(node):
     exp = ''
     if node['exponent']:
         exp += node['exponent']['letter']
-        exp += node['exponent']['sign']
+        if node['exponent']['sign']:
+            exp += node['exponent']['sign']
         exp += ''.join(node['exponent']['power'])
     val = ''.join([i, '.', d, exp])
     # convert to a float

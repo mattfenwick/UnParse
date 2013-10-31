@@ -40,7 +40,7 @@ _decimal = node('decimal',
 
 _exponent = node('exponent', 
                  ('letter', oneOf('eE')), 
-                 ('sign', optional('+', oneOf('+-'))),
+                 ('sign', optional(None, oneOf('+-'))),
                  ('power', cut('power', _digits)))
 
 
