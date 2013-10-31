@@ -103,7 +103,7 @@ class TestParser(u.TestCase):
         self.assertEqual(two.parse(l('abcde'), {}), m.zero)
         self.assertEqual(two.parse(l('aabcde'), {}), good(l('bcde'), {}, 'a'))
 
-    def testAlt(self):
+    def testAltBinaryRules(self):
         g1, g2, b, e, e2 = c.pure(3), c.pure('hi'), c.zero, c.error('oops'), c.error('2nd')
         r1, r3, r4 = good('abc', None, 3), m.zero, m.error('oops')
         self.assertEqual(c.alt(g1, g2).parse('abc', None), r1)
@@ -116,14 +116,19 @@ class TestParser(u.TestCase):
         self.assertEqual(c.alt(e, b).parse('abc', None), r4)
         self.assertEqual(c.alt(e, e2).parse('abc', None), r4)
     
-    def testAlt2(self):
-        p1 = c.alt(lit1(1), lit1(2))
+    def testAltCornerCases(self):
+        self.assertEqual(m.zero, 
+                         c.alt().parse(l([1,2,3]), None))
+        self.assertEqual(good(l([1,2,3]), None, 'h'), 
+                         c.alt(c.pure('h')).parse(l([1,2,3]), None))
+        self.assertEqual(m.error('oops'), 
+                         c.alt(c.error('oops')).parse(l([1,2,3]), None))
+        self.assertEqual(m.zero, 
+                         c.alt(c.zero).parse(l([1,2,3]), None))
+        p1 = c.alt(c.zero, lit1(1), lit1(2), c.error('d'))
         self.assertEqual(good(l([3,4]), None, 1), p1.parse(l([1,3,4]), None))
         self.assertEqual(good(l([3,4]), None, 2), p1.parse(l([2,3,4]), None))
-        self.assertEqual(m.zero, p1.parse(l([3,3,4]), None))
-        p2 = c.alt(lit1(1), c.error('oops'))
-        self.assertEqual(good(l([3,4]), None, 1), p2.parse(l([1,3,4]), None))
-        self.assertEqual(m.error('oops'), p2.parse(l([2,3,4]), None))
+        self.assertEqual(m.error('d'), p1.parse(l([3,3,4]), None))
     
     def testError(self):
         v1 = c.error('uh-oh').parse('abc', 123)
