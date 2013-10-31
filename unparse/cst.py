@@ -3,7 +3,7 @@
 '''
 from .combinators import (bind, getState, commit, mapError,
                           app,  many0,    seq2R,  optional, 
-                          all_, fmap)
+                          seq, fmap)
 
 
 def cut(message, parser):
@@ -45,7 +45,7 @@ def node(name, *pairs):
     return addError(name, 
                     app(action, 
                         getState, 
-                        all_([fmap(closure_workaround(s), p) for (s, p) in pairs])))
+                        seq(*[fmap(closure_workaround(s), p) for (s, p) in pairs])))
 
 
 def _sep_action(fst, pairs):

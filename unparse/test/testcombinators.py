@@ -103,18 +103,27 @@ class TestParser(u.TestCase):
         self.assertEqual(two.parse(l('abcde'), {}), m.zero)
         self.assertEqual(two.parse(l('aabcde'), {}), good(l('bcde'), {}, 'a'))
 
-    def testPlus(self):
+    def testAlt(self):
         g1, g2, b, e, e2 = c.pure(3), c.pure('hi'), c.zero, c.error('oops'), c.error('2nd')
         r1, r3, r4 = good('abc', None, 3), m.zero, m.error('oops')
-        self.assertEqual(c.plus(g1, g2).parse('abc', None), r1)
-        self.assertEqual(c.plus(g1, b).parse('abc', None), r1)
-        self.assertEqual(c.plus(g1, e).parse('abc', None), r1)
-        self.assertEqual(c.plus(b, g1).parse('abc', None), r1)
-        self.assertEqual(c.plus(b, b).parse('abc', None), r3)
-        self.assertEqual(c.plus(b, e).parse('abc', None), r4)
-        self.assertEqual(c.plus(e, g1).parse('abc', None), r4)
-        self.assertEqual(c.plus(e, b).parse('abc', None), r4)
-        self.assertEqual(c.plus(e, e2).parse('abc', None), r4)
+        self.assertEqual(c.alt(g1, g2).parse('abc', None), r1)
+        self.assertEqual(c.alt(g1, b).parse('abc', None), r1)
+        self.assertEqual(c.alt(g1, e).parse('abc', None), r1)
+        self.assertEqual(c.alt(b, g1).parse('abc', None), r1)
+        self.assertEqual(c.alt(b, b).parse('abc', None), r3)
+        self.assertEqual(c.alt(b, e).parse('abc', None), r4)
+        self.assertEqual(c.alt(e, g1).parse('abc', None), r4)
+        self.assertEqual(c.alt(e, b).parse('abc', None), r4)
+        self.assertEqual(c.alt(e, e2).parse('abc', None), r4)
+    
+    def testAlt2(self):
+        p1 = c.alt(lit1(1), lit1(2))
+        self.assertEqual(good(l([3,4]), None, 1), p1.parse(l([1,3,4]), None))
+        self.assertEqual(good(l([3,4]), None, 2), p1.parse(l([2,3,4]), None))
+        self.assertEqual(m.zero, p1.parse(l([3,3,4]), None))
+        p2 = c.alt(lit1(1), c.error('oops'))
+        self.assertEqual(good(l([3,4]), None, 1), p2.parse(l([1,3,4]), None))
+        self.assertEqual(m.error('oops'), p2.parse(l([2,3,4]), None))
     
     def testError(self):
         v1 = c.error('uh-oh').parse('abc', 123)
@@ -167,8 +176,8 @@ class TestParser(u.TestCase):
         self.assertEqual(val.parse(l([4,4,4]), {}), m.zero)
         self.assertEqual(val.parse(l([3,3,4,5]), {}), good(l([4,5]), {}, [3,3]))
     
-    def testAll(self):
-        val = c.all_([item1, lit1(2), lit1(8)])
+    def testSeq(self):
+        val = c.seq(item1, lit1(2), lit1(8))
         self.assertEqual(val.parse(l([3,2,4]), {}), m.zero)
         self.assertEqual(val.parse(l([3,2,8,16]), {}), good(l([16]), {}, [3,2,8]))
     
@@ -215,15 +224,6 @@ class TestParser(u.TestCase):
         val = c.commit('bag-agg', lit1(2))
         self.assertEqual(val.parse(l([2,3,4]), 'hi'), good(l([3,4]), 'hi', 2))
         self.assertEqual(val.parse(l([3,4,5]), 'hi'), m.error('bag-agg'))
-    
-    def testAny(self):
-        p1 = c.any_([lit1(1), lit1(2)])
-        self.assertEqual(good(l([3,4]), None, 1), p1.parse(l([1,3,4]), None))
-        self.assertEqual(good(l([3,4]), None, 2), p1.parse(l([2,3,4]), None))
-        self.assertEqual(m.zero, p1.parse(l([3,3,4]), None))
-        p2 = c.any_([lit1(1), c.error('oops')])
-        self.assertEqual(good(l([3,4]), None, 1), p2.parse(l([1,3,4]), None))
-        self.assertEqual(m.error('oops'), p2.parse(l([2,3,4]), None))
     
     def testZero(self):
         self.assertEqual(m.zero, c.zero.parse(None, None))

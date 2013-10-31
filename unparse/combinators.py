@@ -107,14 +107,6 @@ def bind(parser, g):
             return r
     return Parser(f)
 
-def plus(self, other):
-    '''
-    Parser e s (m t) a -> Parser e s (m t) a -> Parser e s (m t) a
-    '''
-    def f(xs, s):
-        return self.parse(xs, s).plus(other.parse(xs, s))
-    return Parser(f)
-
 def error(e):
     '''
     e -> Parser e s (m t) a
@@ -203,7 +195,7 @@ def many1(parser):
     '''
     return check(lambda x: len(x) > 0, many0(parser))
 
-def all_(parsers):
+def seq(*parsers):
     '''
     [Parser e s (m t) a] -> Parser e s (m t) [a]
     '''
@@ -225,13 +217,13 @@ def app(f, *parsers):
     '''
     (a -> ... y -> z) -> Parser e s (m t) a -> ... -> Parser e s (m t) y -> Parser e s (m t) z
     '''
-    return fmap(lambda rs: f(*rs), all_(parsers))
+    return fmap(lambda rs: f(*rs), seq(*parsers))
 
 def optional(parser, default=None):
     '''
     Parser e s (m t) a -> a -> Parser e s (m t) a
     '''
-    return plus(parser, pure(default))
+    return alt(parser, pure(default))
 
 def _first(x, _):
     return x
@@ -275,9 +267,9 @@ def commit(e, parser):
     '''
     Parser e s (m t) a -> e -> Parser e s (m t) a
     '''
-    return plus(parser, error(e))
+    return alt(parser, error(e))
 
-def any_(parsers):
+def alt(*parsers):
     '''
     [Parser e s (m t) a] -> Parser e s (m t) a
     '''
@@ -333,7 +325,7 @@ class Itemizer(object):
         '''
         Eq t => [t] -> Parser e s (m t) [t] 
         '''
-        matcher = all_(map(self.literal, elems))
+        matcher = seq(*map(self.literal, elems))
         return seq2R(matcher, pure(elems))
     
     def oneOf(self, elems):

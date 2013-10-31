@@ -37,8 +37,8 @@
 
 from ..cst import (node, sepBy0, cut)
 from ..combinators import (position, seq2R, many0,
-                           error,    any_,  seq2L, not0,
-                           plus,     fmap,  many1, app)
+                           error,    alt,   seq2L, not0,
+                           fmap,     many1, app)
 
 (item, literal, satisfy) = (position.item, position.literal, position.satisfy)
 (oneOf, not1, string) = (position.oneOf, position.not1, position.string)
@@ -54,7 +54,7 @@ _comment = seq2R(literal(';'),
 
 _whitespace = oneOf(WHITESPACE)
 
-junk = many0(plus(_comment, _whitespace))
+junk = many0(alt(_comment, _whitespace))
 
 _number = node('number', 
                ('digits', many1(oneOf(DIGITS))))
@@ -72,7 +72,7 @@ _escape = node('escape',
 
 _string = node('string',
                ('open', literal('"')),
-               ('body', many0(plus(_char, _escape))),
+               ('body', many0(alt(_char, _escape))),
                ('close', cut('double-quote', literal('"'))))
 
 def tok(parser):
@@ -85,7 +85,7 @@ application = error('unimplemented -- application')
 wlist       = error('unimplemented -- list')
 special     = error('unimplemented -- special')
 
-form = any_([symbol, number, string, application, wlist, special])
+form = alt(symbol, number, string, application, wlist, special)
 
 application.parse = node('application',
                          ('open'     , op               ),

@@ -17,9 +17,9 @@
 #         escape  :=  '\\'  ["\/bfnrt]                            <-- that's 8 characters
 #         unicode :=  '\\u'  [0-9a-eA-E](4)
 
-from ..combinators import (many0,  optional,  plus,  app,   pure,
-                           seq2R,  many1,     all_,  any_,  error,
-                           seq2L,  position,  not0)
+from ..combinators import (many0,  optional,  app,   pure,
+                           seq2R,  many1,     seq,   alt,
+                           seq2L,  position,  not0,  error)
 from ..cst import (node, sepBy0, cut)
 
 
@@ -27,7 +27,7 @@ from ..cst import (node, sepBy0, cut)
 (oneOf, not1, string) = (position.oneOf, position.not1, position.string)
 
 def quantity(p, num):
-    return all_([p] * num)
+    return seq(*([p] * num))
 
 
 whitespace = many0(oneOf(' \t\n\r'))
@@ -58,7 +58,7 @@ _number_2 = node('number',
 
 # there are two number patterns solely to get the error reporting right
 #   if there's a `-` but a number can't be parsed, that's an error
-_number = plus(_number_1, _number_2)
+_number = alt(_number_1, _number_2)
 
 _char = node('character',
              ('value', not1(oneOf('\\"'))))
@@ -79,11 +79,11 @@ _unic = node('unicode escape',
 
 _jsonstring = node('string', 
                    ('open', literal('"')), 
-                   ('value', many0(any_([_char, _unic, _escape]))), 
+                   ('value', many0(alt(_char, _unic, _escape))), 
                    ('close', cut('double-quote', literal('"'))))
 
 _keyword = node('keyword', 
-                ('value', any_(map(string, ['true', 'false', 'null']))))
+                ('value', alt(*map(string, ['true', 'false', 'null']))))
 
 def tok(parser):
     return seq2L(parser, whitespace)
@@ -97,7 +97,7 @@ os, cs, oc, cc, comma, colon = map(lambda x: tok(literal(x)), '[]{},:')
 obj = error('unimplemented')
 array = error('unimplemented')
 
-value = any_([jsonstring, number, keyword, obj, array])
+value = alt(jsonstring, number, keyword, obj, array)
 
 array.parse = node('array',
                    ('open', os),
@@ -115,7 +115,7 @@ obj.parse = node('object',
                  ('close', cut('close', cc))).parse
 
 _json = node('json',
-             ('value', value)) # plus(obj, array)),
+             ('value', value)) # alt(obj, array)),
 
 json = seq2L(seq2R(whitespace, _json),
              cut('unparsed input remaining', not0(item)))
