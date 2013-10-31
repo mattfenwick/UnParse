@@ -148,4 +148,5 @@ _token = any_([_identifier, _literal, _other, _separator, _operator])
 
 _input_element = any_([_whitespace, _comment, _token])
 
-_input = many0(_input_element) # what about the optional trailing `Sub`?
+# can't use name `input` -- it's a built-in python function
+tokenizer = many0(_input_element) # what about the optional trailing `Sub`?

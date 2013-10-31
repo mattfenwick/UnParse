@@ -55,7 +55,7 @@ def t_number(node):
     i = ''.join(node['integer'])
     # check that there's no leading 0's
     if i[0] == '0' and len(i) > 1:
-        return Me.error([('invalid leading 0 in number', node['_pos'])])
+        return Me.error([('number: invalid leading 0', node['_pos'])])
     d = ''.join(node['decimal']) if node['decimal'] else ''
     exp = ''
     if node['exponent']:
@@ -67,7 +67,7 @@ def t_number(node):
     num = float(val)
     # check for overflow
     if num in map(float, ['inf', '-inf']):
-        return Me.error([('floating-point overflow', node['_pos'])])
+        return Me.error([('number: floating-point overflow', node['_pos'])])
     return Me.pure(num)
 
 _keywords = {
@@ -134,5 +134,4 @@ def full(input_string):
     other kinds of errors
     """
     cst = run(json, input_string)
-    print cst
     return cst.bind(lambda r: t_json(r['result']))

@@ -1,7 +1,7 @@
 '''
 @author: mattf
 '''
-from ...examples.javatokens import ()
+from ...examples.javatokens import (tokenizer)
 from ...maybeerror import MaybeError
 from ... import combinators
 import unittest
