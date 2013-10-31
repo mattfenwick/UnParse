@@ -67,4 +67,4 @@ def sepBy1(parser, separator):
                many0(app(_pair, separator, parser)))
 
 def sepBy0(parser, separator):
-    return optional({'values': [], 'separators': []}, sepBy1(parser, separator))
+    return optional(sepBy1(parser, separator), {'values': [], 'separators': []})

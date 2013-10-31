@@ -227,11 +227,11 @@ def app(f, *parsers):
     '''
     return fmap(lambda rs: f(*rs), all_(parsers))
 
-def optional(x, parser):
+def optional(parser, default=None):
     '''
     Parser e s (m t) a -> a -> Parser e s (m t) a
     '''
-    return plus(parser, pure(x))
+    return plus(parser, pure(default))
 
 def seq2L(self, other):
     '''

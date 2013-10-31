@@ -182,7 +182,7 @@ class TestParser(u.TestCase):
         self.assertEqual(m.zero, v3)
     
     def testOptional(self):
-        parser = c.optional('blargh', lit1(3))
+        parser = c.optional(lit1(3), 'blargh')
         v1 = parser.parse(l([1,2,3]), 'hi')
         self.assertEqual(good(l([1,2,3]), 'hi', 'blargh'), v1)
         v2 = parser.parse(l([3,2,1]), 'bye')

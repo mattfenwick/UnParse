@@ -40,21 +40,21 @@ _decimal = node('decimal',
 
 _exponent = node('exponent', 
                  ('letter', oneOf('eE')), 
-                 ('sign', optional(None, oneOf('+-'))),
+                 ('sign', optional(oneOf('+-'))),
                  ('power', cut('power', _digits)))
 
 
 _number_1 = node('number', 
                  ('sign', literal('-')),
                  ('integer', cut('digits', _digits)),
-                 ('decimal', optional(None, _decimal)),
-                 ('exponent', optional(None, _exponent)))
+                 ('decimal', optional(_decimal)),
+                 ('exponent', optional(_exponent)))
 
 _number_2 = node('number', 
                  ('sign', pure(None)), # this is to make the result match the schema of _number_1's result
                  ('integer', _digits),
-                 ('decimal', optional(None, _decimal)),
-                 ('exponent', optional(None, _exponent)))
+                 ('decimal', optional(_decimal)),
+                 ('exponent', optional(_exponent)))
 
 # there are two number patterns solely to get the error reporting right
 #   if there's a `-` but a number can't be parsed, that's an error

@@ -61,32 +61,32 @@ _digits = node('digits',
 
 _exponent = node('exponent', 
                  ('e'      , oneOf('eE')),
-                 ('sign'   , optional(None, oneOf('+-'))),
+                 ('sign'   , optional(oneOf('+-'))),
                  ('numeral', _digits))
 
 _num_8_10 = node('int8/10',
                  ('integer' , _digits),
-                 ('dot'     , optional(None, literal('.'))),
-                 ('decimal' , optional(None, _digits)),
-                 ('exponent', optional(None, _exponent)))
+                 ('dot'     , optional(literal('.'))),
+                 ('decimal' , optional(_digits)),
+                 ('exponent', optional(_exponent)))
 
 _num_8_10_dot = node('int8/10',
                      ('integer' , pure(None)),
                      ('dot'     , literal('.')),
                      ('decimal' , _digits),
-                     ('exponent', optional(None, _exponent)))
+                     ('exponent', optional(_exponent)))
 
 _hex_digit = oneOf('0123456789abcdefABCDEF_')
 
 _binary_exponent = node('binary exponent', 
                         ('p'      , oneOf('pP')),
-                        ('sign'   , optional(None, oneOf('-+'))),
+                        ('sign'   , optional(oneOf('-+'))),
                         ('numeral', _digits))
 _num_16 = node('int16',
                ('zero'    , literal('0')),
                ('x'       , oneOf('xX')),
                ('integer' , many0(_hex_digit)),
-               ('dot'     , optional(None, literal('.'))),
+               ('dot'     , optional(literal('.'))),
                ('decimal' , many0(_hex_digit)),
                ('exponent', _binary_exponent))
 
@@ -97,7 +97,7 @@ _num_2 = node('int2',
 
 _num_literal = node('number',
                     ('numeral', any_([_num_2, _num_16, _num_8_10, _num_8_10_dot])),
-                    ('type'   , optional(None, oneOf('fFdDlL'))))
+                    ('type'   , optional(oneOf('fFdDlL'))))
 
 _single = not1(oneOf("'\\"))
 
@@ -108,7 +108,7 @@ _escape = node('escape',
 _octal_escape = node('octal escape',
                      ('open', literal('\\')),
                      ('value', plus(all_([oneOf('0123'), oneOf('01234567'), oneOf('01234567')]), 
-                                    all_([oneOf('01234567'), optional(None, oneOf('01234567'))]))))
+                                    all_([oneOf('01234567'), optional(oneOf('01234567'))]))))
 
 _char_literal = node('char',
                      ('open', literal("'")),
