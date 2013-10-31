@@ -2,7 +2,7 @@
 
 Another parser combinator library for Python?  Don't we have enough of those already???
 
-That depends on what we want out of a parser library.  My preferences are:
+That depends on what we want out of a parser library.  My preferences are for parsers that:
 
  - simple and clear definition of the parse model:
    - inputs
@@ -21,7 +21,7 @@ That depends on what we want out of a parser library.  My preferences are:
  - provides not just complex parsers, but also the primitive.  What are the most 
    basic parsers, out of which bigger ones are built?  
  
- - building parsers is all about composition.  This means there needs to be
+ - make parser composition easy.  This means there needs to be
    powerful operations for combining parsers, such as sequencing, monadic 
    sequencing, choice, and repetition.
  
@@ -61,11 +61,12 @@ which takes two arguments:
 
 The return value is one of three possible results:
 
- - success, in which case it includes the (possibly modified) token sequence,
-   the (possibly modified) parsing state, and a result
+ - success, including:
+    - the remaining tokens
+    - new state
+    - result value
  - failure, which indicates that the match failed
- - error, which means that something bad happened which needs to be reported --
-   it includes error information
+ - error, which means that something bad happened and includes error information
 
 Successful parses allow parsing to continue; failures allow parsing to backtrack
 and try a different alternative; errors abort parsing immediately with relevant
@@ -83,81 +84,6 @@ UnParse avoids magic -- the kind of magic that makes it easy to do really simple
 things, but hard to deal with actual real-world problems in a clean, sane way.
 This allows UnParse to stay simple and focused -- and you don't need to worry 
 about it mucking with things behind your back -- and free of arbitrary restrictions.
-
-
-## API ##
-
- - `Parser` -- parameterized by an underlying result type
- 
-   1. constants
-   
-     - `zero`
-     
-     - `get`
-     
-     - `getState`
-     
-     - `itemBasic`
-     
-     - `itemPosition`
-   
-   2. value to parser
-   
-     - `pure`
-     
-     - `error`
-     
-     - `app`
-     
-     - `all`
-     
-     - `put`
-     
-     - `putState`
-     
-     - `updateState`
-     
-     - `any`
-   
-   3. parameterizable by choice of `item`
-     
-     - `literal`
-     
-     - `string`
-     
-     - `satisfy`
-     
-     - `not1`
-   
-   4. parser to parser
-   
-     - `fmap`
-     
-     - `bind`
-     
-     - `plus`
-     
-     - `mapError`
-     
-     - `catchError`
-     
-     - `lookahead`
-     
-     - `check`
-     
-     - `many0`
-     
-     - `many1`
-     
-     - `optional`
-     
-     - `seq2L`
-     
-     - `seq2R`
-     
-     - `not0`
-
-     - `commit`
      
 
 ### Contact information ###
