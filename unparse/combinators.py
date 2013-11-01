@@ -333,7 +333,7 @@ class Itemizer(object):
         return self.satisfy(lambda x: x in c_set)
 
 
-def _itemBasic(xs, s):
+def _item_basic(xs, s):
     '''
     Simply consumes a single token if one is available, presenting that token
     as the value.  Fails if token stream is empty.
@@ -349,10 +349,10 @@ def _bump(c, p):
         return (line + 1, 1)
     return (line, col + 1)
 
-def _itemPosition(xs, position):
+def _item_position(xs, position):
     '''
     Does two things:
-     - consumes a single token if available, failing otherwise (see `itemBasic`)
+     - consumes a single token if available, failing otherwise (see `_item_basic`)
      - updates the position info in state -- `\n` is a newline
      
     This assumes that the state is a 2-tuple of integers, (line, column).
@@ -362,8 +362,20 @@ def _itemPosition(xs, position):
     first, rest = xs.first(), xs.rest()
     return good(first, rest, _bump(first, position))
 
-position = Itemizer(_itemPosition)
-basic = Itemizer(_itemBasic)
+def _item_count(xs, ct):
+    '''
+    Does two things:
+      1. see `_item_basic`
+      2. increments a counter -- which tells how many tokens have been consumed
+    '''
+    if xs.isEmpty():
+        return M.zero
+    first, rest = xs.first(), xs.rest()
+    return good(first, rest, ct + 1)
+
+position = Itemizer(_item_position)
+basic = Itemizer(_item_basic)
+count = Itemizer(_item_count)
 
 
 def run(parser, input_string, state=(1,1)):

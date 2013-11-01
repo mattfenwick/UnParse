@@ -14,6 +14,8 @@ iz1 = c.basic
 (item1, lit1, sat1, not11, str1) = iz1.item, iz1.literal, iz1.satisfy, iz1.not1, iz1.string
 iz2 = c.position
 (item2, lit2, sat2, not12, str2) = iz2.item, iz2.literal, iz2.satisfy, iz2.not1, iz2.string
+iz3 = c.count
+(item3, lit3, sat3, not13, str3) = iz3.item, iz3.literal, iz3.satisfy, iz3.not1, iz3.string
 
 
 
@@ -48,10 +50,7 @@ class BasicTokens(u.TestCase):
 
 
 
-
-
-
-class CountTokens(u.TestCase):
+class PositionTokens(u.TestCase):
 
     def testItemPosition(self):
         self.assertEqual(m.zero, item2.parse(l(''), (1,1)))
@@ -82,7 +81,39 @@ class CountTokens(u.TestCase):
         self.assertEqual(val.parse(l('345'), (1,1)), good(l('45'), (1,2), '3'))
 
 
+
+class CountTokens(u.TestCase):
+
+    def testItemPosition(self):
+        self.assertEqual(m.zero, item3.parse(l(''), (1,1)))
+        self.assertEqual(good(l('bcdef'), 6, 'a'), item3.parse(l('abcdef'), 5))
+        self.assertEqual(good(l('bcdef'), 101, '\n'), item3.parse(l('\nbcdef'), 100))
+
+    def testLiteral(self):
+        val = lit3('3')
+        self.assertEqual(val.parse(l('345'), 8), good(l('45'), 9, '3'))
+        self.assertEqual(val.parse(l('45'), 8), m.zero)
     
+    def testSatisfy(self):
+        v1 = sat3(lambda x: int(x) > 3).parse(l('123'), 22)
+        self.assertEqual(m.zero, v1)
+        v2 = sat3(lambda x: int(x) < 3).parse(l('123'), 22)
+        self.assertEqual(good(l('23'), 23, '1'), v2)
+    
+    def testString(self):
+        parser = str3('abc')
+        v1 = parser.parse(l('abcdef'), 43)
+        self.assertEqual(good(l('def'), 46, 'abc'), v1)
+        v2 = parser.parse(l('abdef'), 43)
+        self.assertEqual(m.zero, v2)
+    
+    def testNot1(self):
+        val = not13(lit3('2'))
+        self.assertEqual(val.parse(l('234'), 61), m.zero)
+        self.assertEqual(val.parse(l('345'), 61), good(l('45'), 62, '3'))
+
+
+
 class TestParser(u.TestCase):
     
     def testFmap(self):
