@@ -16,9 +16,9 @@ error = maybeerror.MaybeError.error
 
 l = combinators.ConsList
 
-def cst(type_, pos, **kwargs):
-    kwargs['_type'] = type_
-    kwargs['_pos'] = pos
+def cst(name, state, **kwargs):
+    kwargs['_name'] = name
+    kwargs['_state'] = state
     return kwargs
 
 def my_object(pos, seps, vals):
