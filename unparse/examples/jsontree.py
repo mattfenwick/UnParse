@@ -52,18 +52,20 @@ def t_string(node):
 
 def t_number(node):
     # check that node _name is number (optional)
+    sign = node['sign'] if node['sign'] else '+'
     i = ''.join(node['integer'])
     # check that there's no leading 0's
     if i[0] == '0' and len(i) > 1:
         return Me.error([('number: invalid leading 0', node['_state'])])
-    d = ''.join(node['decimal']) if node['decimal'] else ''
+    d = ''.join(node['decimal']['digits']) if node['decimal'] else ''
     exp = ''
     if node['exponent']:
         exp += node['exponent']['letter']
         if node['exponent']['sign']:
             exp += node['exponent']['sign']
         exp += ''.join(node['exponent']['power'])
-    val = ''.join([i, '.', d, exp])
+    val = ''.join([sign, i, '.', d, exp])
+    print val, node
     # convert to a float
     num = float(val)
     # check for overflow
