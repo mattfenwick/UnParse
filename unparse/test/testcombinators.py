@@ -11,11 +11,11 @@ def good(rest, state, result):
     return m.pure({'rest': rest, 'state': state, 'result': result})
 
 iz1 = c.basic
-(item1, lit1, sat1, not11, str1) = iz1.item, iz1.literal, iz1.satisfy, iz1.not1, iz1.string
+(item1, lit1, sat1, not11, str1, oneOf1) = iz1.item, iz1.literal, iz1.satisfy, iz1.not1, iz1.string, iz1.oneOf
 iz2 = c.position
-(item2, lit2, sat2, not12, str2) = iz2.item, iz2.literal, iz2.satisfy, iz2.not1, iz2.string
+(item2, lit2, sat2, not12, str2, oneOf2) = iz2.item, iz2.literal, iz2.satisfy, iz2.not1, iz2.string, iz2.oneOf
 iz3 = c.count
-(item3, lit3, sat3, not13, str3) = iz3.item, iz3.literal, iz3.satisfy, iz3.not1, iz3.string
+(item3, lit3, sat3, not13, str3, oneOf3) = iz3.item, iz3.literal, iz3.satisfy, iz3.not1, iz3.string, iz3.oneOf
 
 
 
@@ -47,6 +47,12 @@ class BasicTokens(u.TestCase):
         val = not11(lit1(2))
         self.assertEqual(val.parse(l([2,3,4]), {}), m.zero)
         self.assertEqual(val.parse(l([3,4,5]), {}), good(l([4,5]), {}, 3))
+    
+    def testOneOf(self):
+        p = oneOf1('abc')
+        self.assertEqual(p.parse(l('cqrs'), None), good(l('qrs'), None, 'c'))
+        self.assertEqual(p.parse(l('aqrs'), None), good(l('qrs'), None, 'a'))
+        self.assertEqual(p.parse(l('dqrs'), None), m.zero)
 
 
 
@@ -79,6 +85,12 @@ class PositionTokens(u.TestCase):
         val = not12(lit2('2'))
         self.assertEqual(val.parse(l('234'), (1,1)), m.zero)
         self.assertEqual(val.parse(l('345'), (1,1)), good(l('45'), (1,2), '3'))
+    
+    def testOneOf(self):
+        p = oneOf2('abc')
+        self.assertEqual(p.parse(l('cqrs'), (3,4)), good(l('qrs'), (3,5), 'c'))
+        self.assertEqual(p.parse(l('aqrs'), (8,1)), good(l('qrs'), (8,2), 'a'))
+        self.assertEqual(p.parse(l('dqrs'), (2,2)), m.zero)
 
 
 
@@ -111,6 +123,12 @@ class CountTokens(u.TestCase):
         val = not13(lit3('2'))
         self.assertEqual(val.parse(l('234'), 61), m.zero)
         self.assertEqual(val.parse(l('345'), 61), good(l('45'), 62, '3'))
+    
+    def testOneOf(self):
+        p = oneOf3('abc')
+        self.assertEqual(p.parse(l('cqrs'), 4), good(l('qrs'), 5, 'c'))
+        self.assertEqual(p.parse(l('aqrs'), 8), good(l('qrs'), 9, 'a'))
+        self.assertEqual(p.parse(l('dqrs'), 7), m.zero)
 
 
 
