@@ -85,7 +85,7 @@ class PositionTokens(u.TestCase):
 class CountTokens(u.TestCase):
 
     def testItemPosition(self):
-        self.assertEqual(m.zero, item3.parse(l(''), (1,1)))
+        self.assertEqual(m.zero, item3.parse(l(''), 8))
         self.assertEqual(good(l('bcdef'), 6, 'a'), item3.parse(l('abcdef'), 5))
         self.assertEqual(good(l('bcdef'), 101, '\n'), item3.parse(l('\nbcdef'), 100))
 
