@@ -251,6 +251,13 @@ class TestParser(u.TestCase):
         v2 = parser.parse(l([3,2,1]), 'bye')
         self.assertEqual(good(l([2,1]), 'bye', 3), v2)
     
+    def testOptionalNoValue(self):
+        p = c.optional(lit1(3))
+        v1 = p.parse(l([3,2,1]), None)
+        self.assertEqual(good(l([2,1]), None, 3), v1)
+        v2 = p.parse(l([1,2,3]), None)
+        self.assertEqual(good(l([1,2,3]), None, None), v2)
+    
     def testSeq2R(self):
         val = c.seq2R(lit1(2), lit1(3))
         self.assertEqual(val.parse(l([4,5]), {}), m.zero)
