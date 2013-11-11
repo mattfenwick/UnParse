@@ -69,11 +69,11 @@ class Tests(u.TestCase):
         def f(x, y, z):
             return [x, z, y, z]
         # apply over lots of success
-        self.assertEqual(m.pure([3, 5, 4, 5]), m.app(f, g1, g2, g3))
+        self.assertEqual(m.app(f, g1, g2, g3), m.pure([3, 5, 4, 5]))
         # short-circuit zero
-        self.assertEqual(z1, m.app(f, g1, z1, g2))
+        self.assertEqual(m.app(f, g1, z1, g2), z1)
         # short-circuit error
-        self.assertEqual(e1, m.app(f, g1, g3, e1))
+        self.assertEqual(m.app(f, g1, g3, e1), e1)
 
     def testPlus(self):
         g1, g2, bad, err = m.pure(4), m.pure('hi'), m.zero, m.error('oops')
@@ -93,6 +93,6 @@ class Tests(u.TestCase):
 
     def testMapError(self):
         good, bad, error = m.pure(3), m.zero, m.error(4)
-        self.assertEqual(good, good.mapError(inc))
-        self.assertEqual(bad, bad.mapError(inc))
-        self.assertEqual(m.error(5), error.mapError(inc))
+        self.assertEqual(good.mapError(inc) , good)
+        self.assertEqual(bad.mapError(inc)  , bad)
+        self.assertEqual(error.mapError(inc), m.error(5))
