@@ -219,12 +219,6 @@ def app(f, *parsers):
     '''
     return fmap(lambda rs: f(*rs), seq(*parsers))
 
-def optional(parser, default=None):
-    '''
-    Parser e s (m t) a -> a -> Parser e s (m t) a
-    '''
-    return alt(parser, pure(default))
-
 def _first(x, _):
     return x
 
@@ -263,12 +257,6 @@ def not0(parser):
             return good(None, xs, s)
     return Parser(f)
 
-def commit(e, parser):
-    '''
-    Parser e s (m t) a -> e -> Parser e s (m t) a
-    '''
-    return alt(parser, error(e))
-
 def alt(*parsers):
     '''
     [Parser e s (m t) a] -> Parser e s (m t) a
@@ -281,6 +269,18 @@ def alt(*parsers):
                 return r
         return r
     return Parser(f)
+
+def optional(parser, default=None):
+    '''
+    Parser e s (m t) a -> a -> Parser e s (m t) a
+    '''
+    return alt(parser, pure(default))
+
+def commit(e, parser):
+    '''
+    Parser e s (m t) a -> e -> Parser e s (m t) a
+    '''
+    return alt(parser, error(e))
 
 # Parser e s (m t) a
 zero = Parser(lambda xs, s: M.zero)
