@@ -333,7 +333,7 @@ class Itemizer(object):
         return self.satisfy(lambda x: x in c_set)
 
 
-def _f_item_basic(xs, s):
+def _item_basic(xs, s):
     '''
     Simply consumes a single token if one is available, presenting that token
     as the value.  Fails if token stream is empty.
@@ -343,22 +343,44 @@ def _f_item_basic(xs, s):
     first, rest = xs.first(), xs.rest()
     return good(first, rest, s)
 
-basic = Itemizer(Parser(_f_item_basic))
 
 def _bump(char, position):
+    """
+    only treats `\n` as newline
+    """
     line, col = position
     if char == '\n':
         return (line + 1, 1)
     return (line, col + 1)
 
-def _f_position(c):
-    return seq2R(updateState(lambda s: _bump(c, s)), pure(c))
+def _item_position(xs, position):
+    '''
+    Assumes that the state is a 2-tuple of integers, (line, column).
+    Does two things:
+      1. see `_item_basic`
+      2. updates the line/col position in the parsing state
+    '''
+    if xs.isEmpty():
+        return M.zero
+    first, rest = xs.first(), xs.rest()
+    return good(first, rest, _bump(first, position))
 
-_item_position = bind(basic.item, _f_position)
-position = Itemizer(_item_position)
 
-_item_count = seq2L(basic.item, updateState(lambda x: x + 1))
-count = Itemizer(_item_count)
+def _item_count(xs, ct):
+    '''
+    Does two things:
+      1. see `_item_basic`
+      2. increments a counter -- which tells how many tokens have been consumed
+    '''
+    if xs.isEmpty():
+        return M.zero
+    first, rest = xs.first(), xs.rest()
+    return good(first, rest, ct + 1)
+
+
+basic    = Itemizer(Parser(_item_basic))
+position = Itemizer(Parser(_item_position))
+count    = Itemizer(Parser(_item_count))
 
 
 def run(parser, input_string, state=(1,1)):
