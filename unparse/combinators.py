@@ -231,17 +231,17 @@ def _first(x, _):
 def _second(_, y):
     return y
 
-def seq2L(self, other):
+def seq2L(p1, p2):
     '''
     Parser e s (m t) a -> Parser e s (m t) b -> Parser e s (m t) a
     '''
-    return app(_first, self, other)
+    return app(_first, p1, p2)
 
-def seq2R(self, other):
+def seq2R(p1, p2):
     '''
     Parser e s (m t) a -> Parser e s (m t) b -> Parser e s (m t) b
     '''
-    return app(_second, self, other)
+    return app(_second, p1, p2)
 
 def lookahead(parser):
     '''
