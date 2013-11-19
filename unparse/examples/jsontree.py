@@ -5,7 +5,7 @@
 # maps:
 #
 # doneskies:
-#    integers don't have leading 0's (except for the number 0)
+#    integer portion of number: no leading 0's (except for the number 0)
 #    no number overflow
 #    no duplicate keys in maps
 #    number literals to numbers
