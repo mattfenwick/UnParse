@@ -260,6 +260,10 @@ class TestJson(unittest.TestCase):
                               (2,1), 
                               cst('json', (1,1), value=my_object((1,1), [], []))))
     
+    def testNoJson(self):
+        self.assertEqual(json.parse(l('a'), (1,1)),
+                         error([('json value', (1,1))]))
+    
     def testUnclosedString(self):
         self.assertEqual(jsonstring.parse(l('"abc'), (1,1)),
                          error([('string', (1,1)), ('double-quote', (1,5))]))
