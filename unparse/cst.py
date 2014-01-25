@@ -10,15 +10,19 @@ def cut(message, parser):
     """
     assumes errors are lists
     """
-    return bind(getState, lambda p: commit([(message, p)], parser))
+    def f(p):
+        return commit([(message, p)], parser)
+    return bind(getState, f)
 
 def addError(e, parser):
     """
     assumes errors are lists, and
     that the state is a position
     """
-    return bind(getState,
-                lambda pos: mapError(lambda es: [(e, pos)] + es, parser))
+    def f(pos):
+        return mapError(lambda es: [(e, pos)] + es, parser)
+    return bind(getState, f)
+
 
 # wish I could put `pairs` in a kwargs dictionary, but then the order would be lost
 def node(name, *pairs):
