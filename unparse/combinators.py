@@ -55,7 +55,6 @@ class ConsList(object):
         })
 
 
-
 class Parser(object):
     '''
     A wrapper around a callable of type `[t] -> s -> ME ([t], s, a)`.
@@ -64,7 +63,30 @@ class Parser(object):
     
     def __init__(self, parse):
         self.parse = parse
-        
+
+
+def checkFunction(fName, actual):
+    if not hasattr(actual, '__call__'):
+        obj = {
+            'message' : 'type error',
+            'function': fName,
+            'expected': 'function',
+            'actual'  : actual
+        }
+        raise TypeError(obj)
+    # else: nothing to do
+
+def checkParser(fName, actual):
+    if not isinstance(actual, Parser):
+        obj = {
+            'message' : 'type error',
+            'function': fName,
+            'expected': 'Parser',
+            'actual'  : actual
+        }
+        raise TypeError(obj)
+    # else: nothing to do
+
 
 def result(value, rest, state):
     return {'result': value, 'rest': rest, 'state': state}
@@ -80,6 +102,7 @@ def fmap(g, parser):
     '''
     (a -> b) -> Parser e s (m t) a -> Parser e s (m t) b
     '''
+    checkFunction('fmap', g)
     def h(r):
         return result(g(r['result']), r['rest'], r['state'])
     def f(xs, s):
@@ -98,6 +121,8 @@ def bind(parser, g):
     '''
     Parser e s (m t) a -> (a -> Parser e s (m t) b) -> Parser e s (m t) b
     '''
+    checkParser('bind', parser)
+    checkFunction('bind', g)
     def f(xs, s):
         r = parser.parse(xs, s)
         val = r.value
@@ -119,6 +144,8 @@ def catchError(f, parser):
     '''
     Parser e s (m t) a -> (e -> Parser e s (m t) a) -> Parser e s (m t) a
     '''
+    checkFunction('catchError', f)
+    checkParser('catchError', parser)
     def g(xs, s):
         v = parser.parse(xs, s)
         if v.status == 'error':
@@ -130,6 +157,8 @@ def mapError(f, parser):
     '''
     Parser e s (m t) a -> (e -> e) -> Parser e s (m t) a
     '''
+    checkFunction('mapError', f)
+    checkParser('mapError', parser)
     return catchError(compose(error, f), parser)
 
 def put(xs):
@@ -152,6 +181,7 @@ def updateState(g):
     '''
     (s -> s) -> Parser e s (m t) a
     '''
+    checkFunction('updateState', g)
     def f(xs, s):
         return good(None, xs, g(s))
     return Parser(f)
@@ -160,6 +190,8 @@ def check(predicate, parser):
     '''
     (a -> Bool) -> Parser e s (m t) a -> Parser e s (m t) a
     '''
+    checkFunction('check', predicate)
+    checkParser('check', parser)
     def f(xs, s):
         r = parser.parse(xs, s)
         if r.status != 'success':
@@ -173,6 +205,7 @@ def many0(parser):
     '''
     Parser e s (m t) a -> Parser e s (m t) [a]
     '''
+    checkParser('many0', parser)
     def f(xs, s):
         vals = []
         tokens = xs
@@ -193,12 +226,15 @@ def many1(parser):
     '''
     Parser e s (m t) a -> Parser e s (m t) [a]
     '''
+    checkParser('many1', parser)
     return check(lambda x: len(x) > 0, many0(parser))
 
 def seq(*parsers):
     '''
     [Parser e s (m t) a] -> Parser e s (m t) [a]
     '''
+    for p in parsers:
+        checkParser('seq', p)
     def f(xs, s):
         vals = []
         state, tokens = s, xs
@@ -217,7 +253,12 @@ def app(f, *parsers):
     '''
     (a -> ... y -> z) -> Parser e s (m t) a -> ... -> Parser e s (m t) y -> Parser e s (m t) z
     '''
-    return fmap(lambda rs: f(*rs), seq(*parsers))
+    checkFunction('app', f)
+    for p in parsers:
+        checkParser('app', p)
+    def g(args):
+        return f(*args)
+    return fmap(g, seq(*parsers))
 
 def _first(x, _):
     return x
@@ -229,24 +270,30 @@ def seq2L(p1, p2):
     '''
     Parser e s (m t) a -> Parser e s (m t) b -> Parser e s (m t) a
     '''
+    checkParser('seq2L', p1)
+    checkParser('seq2L', p2)
     return app(_first, p1, p2)
 
 def seq2R(p1, p2):
     '''
     Parser e s (m t) a -> Parser e s (m t) b -> Parser e s (m t) b
     '''
+    checkParser('seq2R', p1)
+    checkParser('seq2R', p2)
     return app(_second, p1, p2)
 
 def lookahead(parser):
     '''
     Parser e s (m t) a -> Parser e s (m t) None
     '''
+    checkParser('lookahead', parser)
     return bind(get, lambda xs: seq2R(parser, put(xs)))
 
 def not0(parser):
     '''
     Parser e s (m t) a -> Parser e s (m t) None
     '''
+    checkParser('not0', parser)
     def f(xs, s):
         r = parser.parse(xs, s)
         if r.status == 'error':
@@ -261,6 +308,8 @@ def alt(*parsers):
     '''
     [Parser e s (m t) a] -> Parser e s (m t) a
     '''
+    for p in parsers:
+        checkParser('alt', p)
     def f(xs, s):
         r = M.zero
         for p in parsers:
@@ -274,12 +323,14 @@ def optional(parser, default=None):
     '''
     Parser e s (m t) a -> a -> Parser e s (m t) a
     '''
+    checkParser('optional', parser)
     return alt(parser, pure(default))
 
 def commit(e, parser):
     '''
     Parser e s (m t) a -> e -> Parser e s (m t) a
     '''
+    checkParser('commit', parser)
     return alt(parser, error(e))
 
 # Parser e s (m t) a
@@ -301,6 +352,7 @@ class Itemizer(object):
          - succeed, consuming one single token if there are any tokens left
          - fail if there are no tokens left
         '''
+        checkParser('Itemizer', item)
         self.item = item
 
     def literal(self, x):
@@ -313,12 +365,14 @@ class Itemizer(object):
         '''
         (t -> Bool) -> Parser e s (m t) t
         '''
+        checkFunction('satisfy', pred)
         return check(pred, self.item)
     
     def not1(self, parser):
         '''
         Parser e s (m t) a -> Parser e s (m t) t
         '''
+        checkParser('not1', parser)
         return seq2R(not0(parser), self.item)
 
     def string(self, elems):
