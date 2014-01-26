@@ -1,3 +1,6 @@
+MANIFEST
+dist/
+prof.txt
 *pyc
 .project
 .pydevproject
