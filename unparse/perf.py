@@ -4,8 +4,9 @@
 import cProfile
 import pstats
 from .maybeerror import MaybeError
+from . import combinators as c
 from .combinators import (good, run, Itemizer, basic, position, count, Parser, many0,
-                          seq2R, bind, zero, put, pure, get)
+                          seq2R, bind, zero, put, pure, get, seq2L, updateState)
 
 
 def profile(f, *args, **kwargs):
@@ -15,36 +16,6 @@ def profile(f, *args, **kwargs):
     return stats
 
 
-def _bump(c, p):
-    line, col = p
-    if c == '\n':
-        return (line + 1, 1)
-    return (line, col + 1)
-
-def _item_position(xs, position):
-    '''
-    Does two things:
-     - consumes a single token if available, failing otherwise (see `_item_basic`)
-     - updates the position info in state -- `\n` is a newline
-     
-    This assumes that the state is a 2-tuple of integers, (line, column).
-    '''
-    if xs.isEmpty():
-        return MaybeError.zero
-    first, rest = xs.first(), xs.rest()
-    return good(first, rest, _bump(first, position))
-
-def _item_count(xs, ct):
-    '''
-    Does two things:
-      1. see `_item_basic`
-      2. increments a counter -- which tells how many tokens have been consumed
-    '''
-    if xs.isEmpty():
-        return MaybeError.zero
-    first, rest = xs.first(), xs.rest()
-    return good(first, rest, ct + 1)
-
 def _action(xs):
     if xs.isEmpty():
         return zero
@@ -53,8 +24,9 @@ def _action(xs):
 _item = bind(get, _action)
 
 bas = Itemizer(_item)
-pos = Itemizer(Parser(_item_position))
-ct = Itemizer(Parser(_item_count))
+pos = Itemizer(bind(basic.item, 
+                    lambda char: seq2R(updateState(lambda s: c._bump(char, s)), pure(char))))
+ct = Itemizer(seq2L(basic.item, updateState(lambda x: x + 1)))
 
 def random_nums(size=100000):
     nums = []
@@ -79,6 +51,8 @@ def test_pos(size):
 def test_count(size):
     return test_case(ct.item, count.item, size, 1)
 
+def test_all(size):
+    return [f(size) for f in [test_basic, test_pos, test_count]]
 
 print run(position.item, 'abc')
 print run(many0(pos.item), range(8))
