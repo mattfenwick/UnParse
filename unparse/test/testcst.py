@@ -11,7 +11,11 @@ C = ConsList
 err = MaybeError.error
 
 def good(rest, state, result):
-    return MaybeError.pure({'rest': rest, 'state': state, 'result': result})
+    return MaybeError.pure({
+        'rest': rest,
+        'state': state,
+        'result': result
+    })
 
 def cstnode(name, state, **kwargs):
     kwargs['_name'] = name
