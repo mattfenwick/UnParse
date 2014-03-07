@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Unparse by mattfenwick</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Unparse</h1>
+          <h2>pythonic parsing</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/mattfenwick/UnParse/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/mattfenwick/UnParse/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/mattfenwick/UnParse" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h2>
+<a name="unparse" class="anchor" href="#unparse"><span class="octicon octicon-link"></span></a>UnParse</h2>
+
+<p>Another parser combinator library for Python?  Don't we have enough of those already???</p>
+
+<p>That depends on what we want out of a parser library.  My preferences are for parsers that:</p>
+
+<ul>
+<li>
+<p>simple and clear definition of the parse model:</p>
+
+<ul>
+<li>inputs</li>
+<li>outputs</li>
+<li>backtracking</li>
+<li>(non)-deterministic </li>
+<li>prioritized choice</li>
+</ul>
+</li>
+<li><p>no magic.  Magic operators are often convenient, but it's more important -- 
+and useful in the long run -- to be able to easily implement the magic in
+terms of the model.</p></li>
+<li><p>doesn't hide important details -- but also doesn't force you to worry about
+them unless you need to.</p></li>
+<li><p>provides not just complex parsers, but also the primitive.  What are the most 
+basic parsers, out of which bigger ones are built?  </p></li>
+<li><p>make parser composition easy.  This means there needs to be
+powerful operations for combining parsers, such as sequencing, monadic 
+sequencing, choice, and repetition.</p></li>
+<li><p>doesn't treat lexing as a special case.  Lexing is no different from any
+other kind of parsing, except for the complexity of the language (sometimes).</p></li>
+<li><p>compositional semantics.  Parser behavior should be consistent -- it must not
+depend on what context the parser is in.</p></li>
+<li><p>works with the language, not against it.  Parsers should be able to take 
+advantage of a language's features and capabilities for abstraction -- 
+including functions and objects.  This means that it's easy to create new
+parsers, as well as combinators, using the language's facilities.</p></li>
+<li><p>the result value of a successful parser is important.  I want full control
+over what value is generated.  I don't want a default parse tree crammed with
+tons of useless junk.  I don't want a mess of nested tuples.  Generating the
+result should be clean and simple.</p></li>
+<li><p>errors are a key aspect of useful parsers.  How and when are they created,
+and with what information (position, message explaining the reason)?  Once
+an error is created, how is it propagated?  How do errors interact with the
+parse model -- backtracking -- and with parser composition?</p></li>
+</ul><p>These are the issues that UnParse addresses and that differentiate it from
+other parser libraries.  Read on for more information!</p>
+
+<h2>
+<a name="overview" class="anchor" href="#overview"><span class="octicon octicon-link"></span></a>Overview</h2>
+
+<p>UnParse is a library for building complex parsers.  Parsers are created and
+manipulated as Python objects, and are invoked using their <code>parse</code> method,
+which takes two arguments:</p>
+
+<ul>
+<li>the token sequence that is being parsed</li>
+<li>the parsing state</li>
+</ul><p>The return value is one of three possible results:</p>
+
+<ul>
+<li>success, including:
+
+<ul>
+<li>the remaining tokens</li>
+<li>new state</li>
+<li>result value</li>
+</ul>
+</li>
+<li>failure, which indicates that the match failed</li>
+<li>error, which means that something bad happened and includes error information</li>
+</ul><p>Successful parses allow parsing to continue; failures allow parsing to backtrack
+and try a different alternative; errors abort parsing immediately with relevant
+error information to accurately indicate what and where the problem was.</p>
+
+<p>UnParse supports monadic parsing, as well as combinators based on the Applicative,
+Functor, MonadError, Alternative, and Traversable typeclasses, if you're familiar
+with Haskell.  It also supports lookahead and optional parses.  </p>
+
+<p>Best of all, since parsers are ordinary Python objects, they play by the rules --
+you don't need any special knowledge or syntax to use them, they work just fine
+with functions and classes, and you can put them in data structures.</p>
+
+<p>UnParse avoids magic -- the kind of magic that makes it easy to do really simple
+things, but hard to deal with actual real-world problems in a clean, sane way.
+This allows UnParse to stay simple and focused -- and you don't need to worry 
+about it mucking with things behind your back -- and free of arbitrary restrictions.</p>
+
+<h3>
+<a name="contact-information" class="anchor" href="#contact-information"><span class="octicon octicon-link"></span></a>Contact information</h3>
+
+<p>Found a bug?  Need help figuring something out?  Want a new feature?  Feel free
+to report anything using the github issue tracker, or email me directly at
+mfenwick100 at gmail dot com</p>
+        </section>
+
+        <footer>
+          Unparse is maintained by <a href="https://github.com/mattfenwick">mattfenwick</a><br>
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
