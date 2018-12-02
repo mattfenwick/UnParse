@@ -58,3 +58,7 @@ class TestConsList(u.TestCase):
         self.assertNotEqual(C([1,2,3], 1), C([1,2,3], 0))
         self.assertNotEqual(C([1,2,3], 1), C([1,4,3], 1))
         self.assertNotEqual(C([1,4,3], 1), C([1,2,3], 1))
+
+
+if __name__ == "__main__":
+    u.main()

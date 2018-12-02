@@ -293,3 +293,7 @@ class TestParser(u.TestCase):
     
     def testGetState(self):
         self.assertEqual(c.getState.parse('abc', 123), good('abc', 123, 123))
+
+
+if __name__ == "__main__":
+    u.main()

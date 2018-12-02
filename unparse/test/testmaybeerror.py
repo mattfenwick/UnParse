@@ -94,3 +94,7 @@ class Tests(u.TestCase):
         self.assertEqual(g1.mapError(inc), g1)
         self.assertEqual(b1.mapError(inc), b1)
         self.assertEqual(e3.mapError(inc), e4)
+
+
+if __name__ == "__main__":
+    u.main()

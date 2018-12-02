@@ -63,3 +63,7 @@ class TestCst(u.TestCase):
                          err([('blar', 17), ('oops', 17)]))
         self.assertEqual(node('blar', ('a', count.item), ('b', cut('oops', zero))).parse(C('def'), 17), 
                          err([('blar', 17), ('oops', 18)]))
+
+
+if __name__ == "__main__":
+    u.main()
