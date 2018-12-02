@@ -1,28 +1,39 @@
 '''
 @author: matt
 '''
-from .combinators import (bind, getState, commit, mapError,
-                          app,  many0,    seq2R,  optional, 
-                          seq, fmap)
+from .combinators import (checkParser, bind, getState, commit, addError, seq, fmap, app)
 
+
+def _forbid_duplicates(arr):
+    keys = set()
+    for a in arr:
+        if a in keys:
+            raise Exception("duplicate name -- {}".format(a))
+        keys.add(a)
+
+def _forbid_keys(forbidden, keys):
+    key_set = set(keys)
+    for key in forbidden:
+        if key in key_set:
+            raise Exception('cst node: forbidden key: {}'.format(key))
 
 def cut(message, parser):
-    """
-    assumes errors are lists
-    """
-    def f(p):
-        return commit([(message, p)], parser)
+    '''
+    e -> Parser [(e, s)] s (m t) a -> Parser [(e, s)] s (m t) a
+    '''
+    checkParser('cut', parser)
+    def f(state):
+        return commit([(message, state)], parser)
     return bind(getState, f)
 
-def addError(e, parser):
-    """
-    assumes errors are lists, and
-    that the state is a position
-    """
-    def f(pos):
-        return mapError(lambda es: [(e, pos)] + es, parser)
-    return bind(getState, f)
-
+def addErrorState(e, parser):
+    '''
+     e -> Parser [(e, s)] s (m t) a -> Parser [(e, s)] s (m t) a
+    '''
+    checkParser('addErrorState', parser)
+    def g(state):
+        return addError((e, state), parser)
+    return bind(getState, g)
 
 # wish I could put `pairs` in a kwargs dictionary, but then the order would be lost
 def node(name, *pairs):
@@ -33,42 +44,16 @@ def node(name, *pairs):
     4. adds an error frame
     """
     names = map(lambda x: x[0], pairs)
-    if len(names) != len(set(names)):
-        raise ValueError('duplicate names')
-    if '_name' in names:
-        raise ValueError('forbidden key: "_name"')
-    if '_state' in names:
-        raise ValueError('forbidden key: "_state"')
-    def action(state, results):
+    _forbid_duplicates(names)
+    _forbid_keys(['_name', '_start', '_end'], names)
+    def action(start, results, end):
         out = dict(results)
-        out['_state'] = state
+        out['_start'] = start
         out['_name'] = name
+        out['_end'] = end
         return out
-    def closure_workaround(s): # captures s
-        return lambda y: (s, y)
-    return addError(name, 
-                    app(action, 
-                        getState, 
-                        seq(*[fmap(closure_workaround(s), p) for (s, p) in pairs])))
-
-
-def _sep_action(fst, pairs):
-    vals, seps = [fst], []
-    for (sep, val) in pairs:
-        vals.append(val)
-        seps.append(sep)
-    return {
-        'values': vals, 
-        'separators': seps
-    }
-
-def _pair(x, y):
-    return (x, y)
-
-def sepBy1(parser, separator):
-    return app(_sep_action,
-               parser,
-               many0(app(_pair, separator, parser)))
-
-def sepBy0(parser, separator):
-    return optional(sepBy1(parser, separator), {'values': [], 'separators': []})
+    def closure_workaround(a):
+        '''captures value of a'''
+        return lambda b: (a, b)
+    child_parsers = seq([fmap(closure_workaround(name), parser) for (name, parser) in pairs])
+    return addErrorState(name, app(action, getState, child_parsers, getState))
