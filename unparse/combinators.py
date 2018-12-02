@@ -416,7 +416,7 @@ class Itemizer(object):
         '''
         Eq t => [t] -> Parser e s (m t) [t] 
         '''
-        matcher = seq(map(self.literal, elems))
+        matcher = seq(list(map(self.literal, elems)))
         return seq2R(matcher, pure(elems))
     
     def oneOf(self, elems):

@@ -43,7 +43,7 @@ def node(name, *pairs):
     3. grabs state at which parsers started
     4. adds an error frame
     """
-    names = map(lambda x: x[0], pairs)
+    names = [x for (x, _) in pairs]
     _forbid_duplicates(names)
     _forbid_keys(['_name', '_start', '_end'], names)
     def action(start, results, end):
