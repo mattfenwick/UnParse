@@ -148,26 +148,26 @@ class TestParser(u.TestCase):
     def testAltBinaryRules(self):
         g1, g2, b, e, e2 = c.pure(3), c.pure('hi'), c.zero, c.error('oops'), c.error('2nd')
         r1, r3, r4 = good('abc', None, 3), m.zero, m.error('oops')
-        self.assertEqual(c.alt(g1, g2).parse('abc', None), r1)
-        self.assertEqual(c.alt(g1, b).parse('abc', None), r1)
-        self.assertEqual(c.alt(g1, e).parse('abc', None), r1)
-        self.assertEqual(c.alt(b, g1).parse('abc', None), r1)
-        self.assertEqual(c.alt(b, b).parse('abc', None), r3)
-        self.assertEqual(c.alt(b, e).parse('abc', None), r4)
-        self.assertEqual(c.alt(e, g1).parse('abc', None), r4)
-        self.assertEqual(c.alt(e, b).parse('abc', None), r4)
-        self.assertEqual(c.alt(e, e2).parse('abc', None), r4)
+        self.assertEqual(c.alt([g1, g2]).parse('abc', None), r1)
+        self.assertEqual(c.alt([g1,  b]).parse('abc', None), r1)
+        self.assertEqual(c.alt([g1,  e]).parse('abc', None), r1)
+        self.assertEqual(c.alt([b , g1]).parse('abc', None), r1)
+        self.assertEqual(c.alt([b ,  b]).parse('abc', None), r3)
+        self.assertEqual(c.alt([b ,  e]).parse('abc', None), r4)
+        self.assertEqual(c.alt([e , g1]).parse('abc', None), r4)
+        self.assertEqual(c.alt([e ,  b]).parse('abc', None), r4)
+        self.assertEqual(c.alt([e , e2]).parse('abc', None), r4)
     
     def testAltCornerCases(self):
-        self.assertEqual(c.alt().parse(l([1,2,3]), None), 
+        self.assertEqual(c.alt([]).parse(l([1,2,3]), None), 
                          m.zero)
-        self.assertEqual(c.alt(c.pure('h')).parse(l([1,2,3]), None), 
+        self.assertEqual(c.alt([c.pure('h')]).parse(l([1,2,3]), None), 
                          good(l([1,2,3]), None, 'h'))
-        self.assertEqual(c.alt(c.error('oops')).parse(l([1,2,3]), None),
+        self.assertEqual(c.alt([c.error('oops')]).parse(l([1,2,3]), None),
                          m.error('oops'))
-        self.assertEqual(c.alt(c.zero).parse(l([1,2,3]), None),
+        self.assertEqual(c.alt([c.zero]).parse(l([1,2,3]), None),
                          m.zero)
-        p1 = c.alt(c.zero, iz1.literal(1), iz1.literal(2), c.error('d'))
+        p1 = c.alt([c.zero, iz1.literal(1), iz1.literal(2), c.error('d')])
         self.assertEqual(p1.parse(l([1,3,4]), None), good(l([3,4]), None, 1))
         self.assertEqual(p1.parse(l([2,3,4]), None), good(l([3,4]), None, 2))
         self.assertEqual(p1.parse(l([3,3,4]), None), m.error('d'))
@@ -180,13 +180,13 @@ class TestParser(u.TestCase):
         f1 = lambda e: c.pure(3)
         f2 = lambda e: c.error('dead again')
         # error -> good -- resumes parsing with tokens and state from before the error occurred
-        self.assertEqual(c.catchError(f1, c.error('dead 1')).parse('123', [2, 4]),
+        self.assertEqual(c.catchError(c.error('dead 1'), f1).parse('123', [2, 4]),
                          good('123', [2,4], 3))
         # good -> good (unaffected by this combinator)
-        self.assertEqual(c.catchError(f1, c.pure(18)).parse('123', [2,4]),
+        self.assertEqual(c.catchError(c.pure(18), f1).parse('123', [2,4]),
                          good('123', [2,4], 18))
         # error -> error
-        self.assertEqual(c.catchError(f2, c.error('dead 1')).parse('123', [2,4]),
+        self.assertEqual(c.catchError(c.error('dead 1'), f2).parse('123', [2,4]),
                          m.error('dead again'))
         # good -> error is not possible with this combinator
         
@@ -201,15 +201,15 @@ class TestParser(u.TestCase):
 
     def testPut(self):
         val = c.put('xyz')
-        self.assertEqual(val.parse('abc', []), good('xyz', [], None))
+        self.assertEqual(val.parse('abc', []), good('xyz', [], 'xyz'))
     
     def testPutState(self):
         v1 = c.putState(29).parse('abc123', 2)
-        self.assertEqual(v1, good('abc123', 29, None))
+        self.assertEqual(v1, good('abc123', 29, 29))
     
     def testUpdateState(self):
         v1 = c.updateState(lambda x: x * 4).parse('abc', 18)
-        self.assertEqual(v1, good('abc', 72, None))
+        self.assertEqual(v1, good('abc', 72, 72))
         
     def testCheck(self):
         val = c.check(lambda x: len(x) > 3, c.get)
@@ -227,7 +227,7 @@ class TestParser(u.TestCase):
         self.assertEqual(val.parse(l([3,3,4,5]), {}), good(l([4,5]), {}, [3,3]))
     
     def testSeq(self):
-        val = c.seq(iz1.item, iz1.literal(2), iz1.literal(8))
+        val = c.seq([iz1.item, iz1.literal(2), iz1.literal(8)])
         self.assertEqual(val.parse(l([3,2,4]), {}), m.zero)
         self.assertEqual(val.parse(l([3,2,8,16]), {}), good(l([16]), {}, [3,2,8]))
     

@@ -277,7 +277,7 @@ def lookahead(parser):
     checkParser('lookahead', parser)
     def g(xs):
         def h(s):
-            return app(lambda a, _1, _2: a, [parser, put(xs), putState(s)])
+            return app(lambda a, _1, _2: a, parser, put(xs), putState(s))
         return bind(getState, h)
     return bind(get, g)
 
@@ -389,7 +389,7 @@ class Itemizer(object):
             if xs.isEmpty():
                 return M.zero
             first, rest = xs.first(), xs.rest()
-            return good(first, rest, self.f(first, rest))
+            return good(first, rest, self.f(first, s))
         return Parser(g)
 
     def satisfy(self, pred):
