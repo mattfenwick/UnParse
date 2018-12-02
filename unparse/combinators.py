@@ -209,14 +209,12 @@ def many1(parser):
     checkParser('many1', parser)
     return check(lambda x: len(x) > 0, many0(parser))
 
-# TODO get rid of var args
 def seq(parsers):
     '''
     [Parser e s (m t) a] -> Parser e s (m t) [a]
     '''
-    for p in parsers:
-        # TODO add index to string for error reporting
-        checkParser('seq', p)
+    for (ix, p) in enumerate(parsers):
+        checkParser('seq-{}'.format(ix), p)
     def f(xs, s):
         vals = []
         state, tokens = s, xs
@@ -236,8 +234,8 @@ def appP(p, *parsers):
     Parser e s (m t) (a -> ... -> z) -> Parser e s (m t) a -> ... -> Parser e s (m t) z
     '''
     checkParser('appP', p)
-    for parser in parsers:
-        checkParser('appP', parser)
+    for (ix, parser) in enumerate(parsers):
+        checkParser('appP-{}'.format(ix), parser)
     def g(f):
         return fmap(lambda args: f(*args), seq(parsers))
     return bind(p, g)
@@ -246,7 +244,7 @@ def app(f, *args):
     '''
     (a -> ... -> z) -> Parser e s (m t) a -> ... -> Parser e s (m t) z
     '''
-    # TODO check f
+    checkFunction('app', f)
     return appP(pure(f), *args)
 
 def seq2L(p1, p2):
@@ -302,8 +300,8 @@ def alt(parsers):
     '''
     [Parser e s (m t) a] -> Parser e s (m t) a
     '''
-    for p in parsers:
-        checkParser('alt', p)
+    for (ix, p) in enumerate(parsers):
+        checkParser('alt-{}'.format(ix), p)
     def f(xs, s):
         r = M.zero
         for p in parsers:
@@ -353,18 +351,23 @@ def addError(e, parser):
     e -> Parser [e] s (m t) a -> Parser [e] s (m t) a
     assumes errors are lists
     '''
+    checkParser('addError', parser)
     return mapError(lambda es: functions.cons(e, es), parser)
 
 def sepBy1(parser, separator):
     '''
     Parser e s (m t) a -> Parser e s (m t) b -> Parser e s (m t) (a, [(b, a)])
     '''
+    checkParser('sepBy1', parser)
+    checkParser('sepBy1', separator)
     return app(functions.pairs, parser, many0(app(functions.pair, separator, parser)))
 
 def sepBy0(parser, separator):
     '''
     Parser e s (m t) a -> Parser e s (m t) b -> Parser e s (m t) (Maybe (a, [(b, a)]))
     '''
+    checkParser('sepBy0', parser)
+    checkParser('sepBy0', separator)
     return optional(sepBy1(parser, separator))
 
 
