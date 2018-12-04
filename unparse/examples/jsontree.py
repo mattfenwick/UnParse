@@ -16,6 +16,7 @@
 #    escapes to chars
 #    join up string literal
 
+#from __future__ import print_function
 from ..maybeerror import MaybeError as Me
 from .json import json
 from ..combinators import run
@@ -31,7 +32,7 @@ _escapes = {'"': '"',  '\\': '\\',
 def t_char(node):
     val = node['value']
     if node['_name'] == 'unicode escape':
-        return Me.pure(unichr(int(''.join(val), 16)))
+        return Me.pure(chr(int(''.join(val), 16)))
     elif node['_name'] == 'escape':
         # is the escape sequence valid?
         if val in _escapes:
@@ -48,7 +49,7 @@ def t_string(node):
     # check that node _name is string (optional)
     # pull out the value (?), fix up all the characters, join them into a string
     # watch out for errors, reporting position if necessary
-    return add_error('string', node['_start'], Me.app(lambda *args: ''.join(args), *map(t_char, node['value'])))
+    return add_error('string', node['_start'], Me.app(lambda *args: ''.join(args), *list(map(t_char, node['value']))))
 
 def t_number(node):
     # check that node _name is number (optional)
@@ -65,7 +66,7 @@ def t_number(node):
             exp += node['exponent']['sign']
         exp += ''.join(node['exponent']['power'])
     val = ''.join([sign, i, '.', d, exp])
-#    print val, node
+#    print(val, node)
     # convert to a float
     num = float(val)
     # check for overflow
@@ -85,11 +86,11 @@ def t_keyword(node):
     return Me.error([('invalid keyword', node['_start'])])
 
 def t_array(node):
-#    print 'node: ', node
+#    print('node: ', node)
     return add_error('array', 
                      node['_start'], 
                      Me.app(lambda *args: list(args), # this may look super weird -- but it's for the error effects
-                            *map(t_value, [] if node['body'] is None else [node['body'][0]] + [b for (_, b) in node['body'][1]])))
+                            *list(map(t_value, [] if node['body'] is None else [node['body'][0]] + [b for (_, b) in node['body'][1]]))))
 
 def t_pair(node):
     return add_error('key/value pair', 
@@ -103,7 +104,7 @@ def t_build_object(pairs):
     obj = {}
     pos = {}
     for (k, v, p) in pairs:
-        if obj.has_key(k):
+        if k in obj:
             return Me.error([('first key usage', pos[k]), ('duplicate key', p)])
         obj[k] = v
         pos[k] = p
@@ -114,7 +115,7 @@ def t_object(node):
     return add_error('object', 
                      node['_start'],
                      Me.app(lambda *args: list(args), 
-                            *map(t_pair, [node['body'][0]] + [b for (_, b) in node['body'][1]])).bind(t_build_object))
+                            *list(map(t_pair, [node['body'][0]] + [b for (_, b) in node['body'][1]]))).bind(t_build_object))
 
 _values = {
     'keyword': t_keyword,

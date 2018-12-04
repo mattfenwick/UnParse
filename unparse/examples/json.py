@@ -81,7 +81,7 @@ _jsonstring = node('string',
                    ('close', cut('double-quote', literal('"'))))
 
 _keyword = node('keyword', 
-                ('value', alt(map(string, ['true', 'false', 'null']))))
+                ('value', alt(list(map(string, ['true', 'false', 'null'])))))
 
 def tok(parser):
     return seq2L(parser, whitespace)

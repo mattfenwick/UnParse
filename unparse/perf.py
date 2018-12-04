@@ -1,12 +1,12 @@
 '''
 @author: matt
 '''
+from __future__ import print_function
 import cProfile
 import pstats
 from .maybeerror import MaybeError
-from . import combinators as c
-from .combinators import (good, run, Itemizer, basic, position, count, Parser, many0,
-                          seq2R, bind, zero, put, pure, get, seq2L, updateState)
+from .combinators import (run, many0, basic, count, position)
+
 
 
 def profile(f, *args, **kwargs):
@@ -16,18 +16,6 @@ def profile(f, *args, **kwargs):
     return stats
 
 
-def _action(xs):
-    if xs.isEmpty():
-        return zero
-    return seq2R(put(xs.rest()), pure(xs.first()))
-
-_item = bind(get, _action)
-
-bas = Itemizer(_item)
-pos = Itemizer(bind(basic.item, 
-                    lambda char: seq2R(updateState(lambda s: c._bump(char, s)), pure(char))))
-ct = Itemizer(seq2L(basic.item, updateState(lambda x: x + 1)))
-
 def random_nums(size=100000):
     nums = []
     import random
@@ -35,24 +23,28 @@ def random_nums(size=100000):
         nums.append(random.randint(0, 10000))
     return nums
 
-def test_case(p1, p2, size=100000, state=None):
+def test_case(p1, p2, size=100000, state1=None, state2=None):
     nums = random_nums(size)
-    a = profile(run, many0(p1), nums, state)
-    b = profile(run, many0(p2), nums, state)
+    a = profile(run, many0(p1), nums, state1)
+    b = profile(run, many0(p2), nums, state2)
     return a, b
 
-def test_basic(size):
-    return test_case(basic.item, bas.item, size)
+def test_basic_position(size):
+    return test_case(basic.item, position.item, size, None, (1,1))
 
-def test_pos(size):
-#    return test_case(position.item, pos.item, size)
-    return test_case(pos.item, position.item, size, (1,1))
+def test_basic_count(size):
+    return test_case(basic.item, count.item, size, None, 1)
 
-def test_count(size):
-    return test_case(ct.item, count.item, size, 1)
+def test_count_position(size):
+    return test_case(count.item, position.item, size, 1, (1,1))
 
 def test_all(size):
-    return [f(size) for f in [test_basic, test_pos, test_count]]
+    return [f(size) for f in [test_basic_position, test_basic_count, test_count_position]]
 
-print run(position.item, 'abc')
-print run(many0(pos.item), range(8))
+
+if __name__ == "__main__":
+#    print(run(position.item, 'abc'))
+#    print(run(many0(position.item), range(8)))
+#    for i in range(10):
+#        print(test_all(2 ** i))
+    print(test_all(1000000))

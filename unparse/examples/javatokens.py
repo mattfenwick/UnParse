@@ -28,7 +28,7 @@ satisfy, not1, string = iz.satisfy, iz.not1, iz.string
 
 ########### now the real stuff
 
-_line_terminator = alt(map(string, ['\r\n', '\n', '\r']))
+_line_terminator = alt(list(map(string, ['\r\n', '\n', '\r'])))
 
 _input_character = not1(_line_terminator)
 
@@ -135,11 +135,11 @@ OPERATORS = [
 OTHERS = ['...', '@']
 
 # what about position of _other, _separator, and _operator?
-_other = alt(map(string, OTHERS))
+_other = alt(list(map(string, OTHERS)))
 
-_separator = alt(map(literal, SEPARATORS))
+_separator = alt(list(map(literal, SEPARATORS)))
 
-_operator = alt(map(string, OPERATORS))
+_operator = alt(list(map(string, OPERATORS)))
 
 # are these in the right order?  i.e. `...` needs to be before `.`
 _token = alt([_identifier, _literal, _other, _separator, _operator])
