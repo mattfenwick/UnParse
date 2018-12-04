@@ -32,7 +32,7 @@ _escapes = {'"': '"',  '\\': '\\',
 def t_char(node):
     val = node['value']
     if node['_name'] == 'unicode escape':
-        return Me.pure(unichr(int(''.join(val), 16)))
+        return Me.pure(chr(int(''.join(val), 16)))
     elif node['_name'] == 'escape':
         # is the escape sequence valid?
         if val in _escapes:
@@ -104,7 +104,7 @@ def t_build_object(pairs):
     obj = {}
     pos = {}
     for (k, v, p) in pairs:
-        if obj.has_key(k):
+        if k in obj:
             return Me.error([('first key usage', pos[k]), ('duplicate key', p)])
         obj[k] = v
         pos[k] = p
