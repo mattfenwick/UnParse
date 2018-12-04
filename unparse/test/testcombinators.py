@@ -150,7 +150,10 @@ class TestParser(u.TestCase):
         self.assertEqual(val.parse(l('444012'), {}), good(l('4012'), {}, ['4', '4']))
     
     def testLookahead(self):
-        parser = c.seq2L(iz1.literal(2), c.lookahead(iz1.literal(3)))
+        look = c.lookahead(iz1.literal(3))
+        self.assertEqual(look.parse(l([3,4,5]), {}), good(l([3,4,5]), {}, 3))
+        self.assertEqual(look.parse(l([2, 3,4,5]), {}), m.zero)
+        parser = c.seq2L(iz1.literal(2), look)
         self.assertEqual(parser.parse(l([2,3,4,5]), None), good(l([3,4,5]), None, 2))
         self.assertEqual(parser.parse(l([2,4,5]), None), m.zero)
         self.assertEqual(parser.parse(l([3,4,5]), None), m.zero)
