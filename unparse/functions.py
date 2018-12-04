@@ -1,3 +1,6 @@
+import functools
+
+
 def compose(f, g):
     return lambda x: f(g(x))
 
@@ -33,7 +36,7 @@ def updatePosition(char, position):
     return (line + 1, 1) if (char == '\n') else (line, col + 1)
 
 def applyAll(x, fs):
-    return reduce(lambda y, g: g(y), fs, x)
+    return functools.reduce(lambda y, g: g(y), fs, x)
 
 def reverseApplyAll(fs, x):
     return applyAll(x, fs[::-1])
