@@ -272,7 +272,7 @@ def repeat(count, parser):
 
 def lookahead(parser):
     '''
-    Parser e s (m t) a -> Parser e s (m t) None
+    Parser e s (m t) a -> Parser e s (m t) a
     '''
     checkParser('lookahead', parser)
     def g(xs):
