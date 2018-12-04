@@ -19,15 +19,13 @@
 
 from ..combinators import (many0,  optional,  app,   pure,
                            seq2R,  many1,     seq,   alt,
-                           seq2L,  position,  not0,  error)
-from ..cst import (node, sepBy0, cut)
+                           seq2L,  position,  not0,  error,
+                           sepBy0, sepBy1, repeat)
+from ..cst import (node, cut)
 
 
 (item, literal, satisfy) = (position.item, position.literal, position.satisfy)
 (oneOf, not1, string) = (position.oneOf, position.not1, position.string)
-
-def quantity(p, num):
-    return seq(*([p] * num))
 
 
 whitespace = many0(oneOf(' \t\n\r'))
@@ -58,7 +56,7 @@ _number_2 = node('number',
 
 # there are two number patterns solely to get the error reporting right
 #   if there's a `-` but a number can't be parsed, that's an error
-_number = alt(_number_1, _number_2)
+_number = alt([_number_1, _number_2])
 
 _char = node('character',
              ('value', not1(oneOf('\\"'))))
@@ -75,15 +73,15 @@ _hexC = oneOf('0123456789abcdefABCDEF')
 
 _unic = node('unicode escape',
              ('open', string('\\u')),
-             ('value', cut('4 hexadecimal digits', quantity(_hexC, 4))))
+             ('value', cut('4 hexadecimal digits', repeat(4, _hexC))))
 
 _jsonstring = node('string', 
                    ('open', literal('"')), 
-                   ('value', many0(alt(_char, _unic, _escape))), 
+                   ('value', many0(alt([_char, _unic, _escape]))),
                    ('close', cut('double-quote', literal('"'))))
 
 _keyword = node('keyword', 
-                ('value', alt(*map(string, ['true', 'false', 'null']))))
+                ('value', alt(map(string, ['true', 'false', 'null']))))
 
 def tok(parser):
     return seq2L(parser, whitespace)
@@ -97,7 +95,7 @@ os, cs, oc, cc, comma, colon = map(lambda x: tok(literal(x)), '[]{},:')
 obj = error('unimplemented')
 array = error('unimplemented')
 
-value = alt(jsonstring, number, keyword, obj, array)
+value = alt([jsonstring, number, keyword, obj, array])
 
 array.parse = node('array',
                    ('open', os),

@@ -36,11 +36,11 @@ def t_char(node):
         # is the escape sequence valid?
         if val in _escapes:
             return Me.pure(_escapes[val])
-        return Me.error([('invalid escape sequence', node['_state'])])
+        return Me.error([('invalid escape sequence', node['_start'])])
     elif node['_name'] == 'character':
         # no control characters allowed!
         if ord(val) < 32:
-            return Me.error([('invalid control character', node['_state'])])
+            return Me.error([('invalid control character', node['_start'])])
         return Me.pure(val)
     raise TypeError('invalid character node type -- ' + str(node['_name']))
 
@@ -48,7 +48,7 @@ def t_string(node):
     # check that node _name is string (optional)
     # pull out the value (?), fix up all the characters, join them into a string
     # watch out for errors, reporting position if necessary
-    return add_error('string', node['_state'], Me.app(lambda *args: ''.join(args), *map(t_char, node['value'])))
+    return add_error('string', node['_start'], Me.app(lambda *args: ''.join(args), *map(t_char, node['value'])))
 
 def t_number(node):
     # check that node _name is number (optional)
@@ -56,7 +56,7 @@ def t_number(node):
     i = ''.join(node['integer'])
     # check that there's no leading 0's
     if i[0] == '0' and len(i) > 1:
-        return Me.error([('number: invalid leading 0', node['_state'])])
+        return Me.error([('number: invalid leading 0', node['_start'])])
     d = ''.join(node['decimal']['digits']) if node['decimal'] else ''
     exp = ''
     if node['exponent']:
@@ -65,12 +65,12 @@ def t_number(node):
             exp += node['exponent']['sign']
         exp += ''.join(node['exponent']['power'])
     val = ''.join([sign, i, '.', d, exp])
-    print val, node
+#    print val, node
     # convert to a float
     num = float(val)
     # check for overflow
     if num in map(float, ['inf', '-inf']):
-        return Me.error([('number: floating-point overflow', node['_state'])])
+        return Me.error([('number: floating-point overflow', node['_start'])])
     return Me.pure(num)
 
 _keywords = {
@@ -82,22 +82,22 @@ _keywords = {
 def t_keyword(node):
     if node['value'] in _keywords:
         return Me.pure(_keywords[node['value']])
-    return Me.error([('invalid keyword', node['_state'])])
+    return Me.error([('invalid keyword', node['_start'])])
 
 def t_array(node):
-    print 'node: ', node
+#    print 'node: ', node
     return add_error('array', 
-                     node['_state'], 
+                     node['_start'], 
                      Me.app(lambda *args: list(args), # this may look super weird -- but it's for the error effects
-                            *map(t_value, node['body']['values'])))
+                            *map(t_value, [] if node['body'] is None else [node['body'][0]] + [b for (_, b) in node['body'][1]])))
 
 def t_pair(node):
     return add_error('key/value pair', 
-                     node['_state'], 
+                     node['_start'], 
                      Me.app(lambda *args: args, 
                             t_string(node['key']), 
                             t_value(node['value']), 
-                            Me.pure(node['_state'])))
+                            Me.pure(node['_start'])))
 
 def t_build_object(pairs):
     obj = {}
@@ -112,9 +112,9 @@ def t_build_object(pairs):
 def t_object(node):
     # this is really silly.  it should be something like a fold instead
     return add_error('object', 
-                     node['_state'],
+                     node['_start'],
                      Me.app(lambda *args: list(args), 
-                            *map(t_pair, node['body']['values'])).bind(t_build_object))
+                            *map(t_pair, [node['body'][0]] + [b for (_, b) in node['body'][1]])).bind(t_build_object))
 
 _values = {
     'keyword': t_keyword,

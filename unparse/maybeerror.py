@@ -56,6 +56,8 @@ class MaybeError(object):
         })
 
     def __eq__(self, other):
+        if not hasattr(other, '__dict__'):
+            return False
         return self.__dict__ == other.__dict__
     
     def __ne__(self, other):
