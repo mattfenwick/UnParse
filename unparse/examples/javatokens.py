@@ -1,36 +1,34 @@
 '''
 @author: matt
 '''
-from ..combinators import (many0,  optional,  app,   pure,
+from ..combinators import (many0,  optional,  app,   pure, repeat,
                            seq2R,  many1,     seq,   alt,   error,
-                           seq2L,  position,  not0,  Itemizer)
+                           seq2L,  position,  not0,  Itemizer, position)
 from ..cst import (node, cut)
 
-
-def quantifier(parser, num):
-    return seq(*([parser] * num))
 
 # problem:  Java allows unicode escapes anywhere, meaning that a single
 #   char, from the perspective of the parser, may not correspond to an
 #   actual single char in the input stream if there are escapes
 # solution: create my own `Itemizer` instance
-
-_raw_hex_digit = position.oneOf('0123456789abcdefABCDEF')
-_unicode_escape = app(lambda _1, _2, cs: unichr(int(''.join(cs), 16)),
-                      position.literal('\\'),
-                      many0(position.literal('u')), # what about a `cut`?
-                      quantifier(_raw_hex_digit, 4))
-
-_raw_input_character = alt([_unicode_escape, position.item])
-
-iz = Itemizer(_raw_input_character.parse)
+# TODO fix this up somehow.  for now, just ignore
+#_raw_hex_digit = position.oneOf('0123456789abcdefABCDEF')
+#_unicode_escape = app(lambda _1, _2, cs: unichr(int(''.join(cs), 16)),
+#                      position.literal('\\'),
+#                      many0(position.literal('u')), # what about a `cut`?
+#                      repeat(4, _raw_hex_digit))
+#
+#_raw_input_character = alt([_unicode_escape, position.item])
+#
+#iz = Itemizer(_raw_input_character.parse)
+iz = position
 
 item, oneOf, literal = iz.item, iz.oneOf, iz.literal
 satisfy, not1, string = iz.satisfy, iz.not1, iz.string
 
 ########### now the real stuff
 
-_line_terminator = alt(*map(string, ['\r\n', '\n', '\r']))
+_line_terminator = alt(map(string, ['\r\n', '\n', '\r']))
 
 _input_character = not1(_line_terminator)
 
@@ -137,11 +135,11 @@ OPERATORS = [
 OTHERS = ['...', '@']
 
 # what about position of _other, _separator, and _operator?
-_other = alt(*map(string, OTHERS))
+_other = alt(map(string, OTHERS))
 
-_separator = alt(*map(literal, SEPARATORS))
+_separator = alt(map(literal, SEPARATORS))
 
-_operator = alt(*map(string, OPERATORS))
+_operator = alt(map(string, OPERATORS))
 
 # are these in the right order?  i.e. `...` needs to be before `.`
 _token = alt([_identifier, _literal, _other, _separator, _operator])
