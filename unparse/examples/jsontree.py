@@ -16,6 +16,7 @@
 #    escapes to chars
 #    join up string literal
 
+#from __future__ import print_function
 from ..maybeerror import MaybeError as Me
 from .json import json
 from ..combinators import run
@@ -65,7 +66,7 @@ def t_number(node):
             exp += node['exponent']['sign']
         exp += ''.join(node['exponent']['power'])
     val = ''.join([sign, i, '.', d, exp])
-#    print val, node
+#    print(val, node)
     # convert to a float
     num = float(val)
     # check for overflow
@@ -85,7 +86,7 @@ def t_keyword(node):
     return Me.error([('invalid keyword', node['_start'])])
 
 def t_array(node):
-#    print 'node: ', node
+#    print('node: ', node)
     return add_error('array', 
                      node['_start'], 
                      Me.app(lambda *args: list(args), # this may look super weird -- but it's for the error effects
