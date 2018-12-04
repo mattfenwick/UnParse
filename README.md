@@ -1,8 +1,8 @@
 ## UnParse ##
 
-Another parser combinator library for Python?  Don't we have enough of those already???
+Another parser combinator library for Python!
 
-That depends on what we want out of a parser library.  My preferences are for parsers that:
+UnParse is opinionated!
 
  - simple and clear definition of the parse model:
    - inputs
@@ -46,8 +46,7 @@ That depends on what we want out of a parser library.  My preferences are for pa
    an error is created, how is it propagated?  How do errors interact with the
    parse model -- backtracking -- and with parser composition?
 
-These are the issues that UnParse addresses and that differentiate it from
-other parser libraries.  Read on for more information!
+Read on for more information!
  
 
 ## Overview ##
@@ -89,5 +88,4 @@ about it mucking with things behind your back -- and free of arbitrary restricti
 ### Contact information ###
 
 Found a bug?  Need help figuring something out?  Want a new feature?  Feel free
-to report anything using the github issue tracker, or email me directly at
-mfenwick100 at gmail dot com
+to report anything using the github issue tracker or open a PR!
