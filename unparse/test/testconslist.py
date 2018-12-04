@@ -27,7 +27,7 @@ class TestConsList(u.TestCase):
             try:
                 self.assertEqual(c.first(), 'cannot get first of empty sequence')
             except ValueError as e:
-                self.assertEqual(e.message, 'cannot get first element of empty sequence')
+                self.assertEqual(e.args[0], 'cannot get first element of empty sequence')
 
     def testRest(self):
         self.assertEqual(c1.rest(), C([2,3,4], 0))
@@ -36,7 +36,7 @@ class TestConsList(u.TestCase):
             try:
                 self.assertEqual(c.rest(), 'cannot get rest of empty sequence')
             except ValueError as e:
-                self.assertEqual(e.message, 'cannot get rest of empty sequence')
+                self.assertEqual(e.args[0], 'cannot get rest of empty sequence')
     
     def testGetAsList(self):
         self.assertEqual(c1.getAsList(), [1,2,3,4])
