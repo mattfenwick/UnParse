@@ -55,5 +55,5 @@ def node(name, *pairs):
     def closure_workaround(a):
         '''captures value of a'''
         return lambda b: (a, b)
-    child_parsers = seq([fmap(closure_workaround(name), parser) for (name, parser) in pairs])
+    child_parsers = seq([fmap(closure_workaround(parser_name), parser) for (parser_name, parser) in pairs])
     return addErrorState(name, app(action, getState, child_parsers, getState))

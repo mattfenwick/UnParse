@@ -1,58 +1,45 @@
 '''
 @author: matt
 '''
-from ..cst import (cut, addError, node)
-from ..combinators import (ConsList, run, basic, zero, error, count)
+from ..cst import (cut, addErrorState, node)
+from ..combinators import (ConsList, run, basic, zero, error, count, good)
 from ..maybeerror import MaybeError
 import unittest as u
 
 
 C = ConsList
 err = MaybeError.error
+iz1 = basic
 
-def good(rest, state, result):
-    return MaybeError.pure({
-        'rest': rest,
-        'state': state,
-        'result': result
-    })
-
-def cstnode(name, state, **kwargs):
+def cstnode(name, start, end, **kwargs):
     kwargs['_name'] = name
-    kwargs['_state'] = state
+    kwargs['_start'] = start
+    kwargs['_end'] = end
     return kwargs
 
 
 class TestCst(u.TestCase):
     
     def testCutSuccess(self):
-        self.assertEqual(cut('oops', basic.item).parse(C('abc'), None), good(C('bc'), None, 'a'))
-    
-    def testCutFail(self):
+        self.assertEqual(cut('oops', basic.item).parse(C('abc'), None), good('a', C('bc'), None))
         self.assertEqual(cut('oops', zero).parse(C('abc'), 12), err([('oops',12)]))
-    
-    def testCutError(self):
         self.assertEqual(cut('oops', error('err')).parse(C('abc'), 12), err('err'))
-    
-    def testAddErrorSuccess(self):
-        self.assertEqual(addError('oops', basic.item).parse(C('abc'), None), 
-                         good(C('bc'), None, 'a'))
 
-    def testAddErrorFail(self):
-        self.assertEqual(addError('oops', zero).parse(C('abc'), 12), 
+    def testAddErrorState(self):
+        self.assertEqual(addErrorState('oops', iz1.item).parse(C('abc'), None),
+                         good('a', C('bc'), None))
+        self.assertEqual(addErrorState('oops', zero).parse(C('abc'), 12),
                          MaybeError.zero)
-
-    def testAddErrorError(self):
-        self.assertEqual(addError('oops', error(['err'])).parse(C('abc'), 12), 
-                         err([('oops', 12), 'err']))
-
+        self.assertEqual(addErrorState('oops', error(['err'])).parse(C('abc'), 12),
+                         MaybeError.error([('oops', 12), 'err']))
+    
     def testNodeSuccess(self):
         self.assertEqual(node('blar').parse(C('abc'), 17), 
-                         good(C('abc'), 17, cstnode('blar', 17)))
+                         good(cstnode('blar', 17, 17), C('abc'), 17))
         self.assertEqual(node('blar', ('a', count.item)).parse(C('def'), 17), 
-                         good(C('ef'), 18, cstnode('blar', 17, a='d')))
+                         good(cstnode('blar', 17, 18, a='d'), C('ef'), 18))
         self.assertEqual(node('blar', ('a', count.item), ('b', count.item)).parse(C('def'), 17), 
-                         good(C('f'), 19, cstnode('blar', 17, a='d', b='e')))
+                         good(cstnode('blar', 17, 19, a='d', b='e'), C('f'), 19))
     
     def testNodeFailure(self):
         self.assertEqual(node('blar', ('a', zero)).parse(C('abc'), 17),
