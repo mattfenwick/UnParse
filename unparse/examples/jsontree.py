@@ -49,7 +49,7 @@ def t_string(node):
     # check that node _name is string (optional)
     # pull out the value (?), fix up all the characters, join them into a string
     # watch out for errors, reporting position if necessary
-    return add_error('string', node['_start'], Me.app(lambda *args: ''.join(args), *map(t_char, node['value'])))
+    return add_error('string', node['_start'], Me.app(lambda *args: ''.join(args), *list(map(t_char, node['value']))))
 
 def t_number(node):
     # check that node _name is number (optional)
@@ -90,7 +90,7 @@ def t_array(node):
     return add_error('array', 
                      node['_start'], 
                      Me.app(lambda *args: list(args), # this may look super weird -- but it's for the error effects
-                            *map(t_value, [] if node['body'] is None else [node['body'][0]] + [b for (_, b) in node['body'][1]])))
+                            *list(map(t_value, [] if node['body'] is None else [node['body'][0]] + [b for (_, b) in node['body'][1]]))))
 
 def t_pair(node):
     return add_error('key/value pair', 
@@ -115,7 +115,7 @@ def t_object(node):
     return add_error('object', 
                      node['_start'],
                      Me.app(lambda *args: list(args), 
-                            *map(t_pair, [node['body'][0]] + [b for (_, b) in node['body'][1]])).bind(t_build_object))
+                            *list(map(t_pair, [node['body'][0]] + [b for (_, b) in node['body'][1]]))).bind(t_build_object))
 
 _values = {
     'keyword': t_keyword,
