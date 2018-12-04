@@ -84,3 +84,7 @@ class TestSuccess(unittest.TestCase):
         
     def testObject(self):
         self.assertEqual(full('{"": [], "abc": 13e2  }  '), pure({'': [], "abc": 1.3e3}))
+
+
+if __name__ == "__main__":
+    unittest.main()
