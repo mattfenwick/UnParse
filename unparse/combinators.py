@@ -360,7 +360,7 @@ def sepBy1(parser, separator):
     '''
     checkParser('sepBy1', parser)
     checkParser('sepBy1', separator)
-    return app(functions.pairs, parser, many0(app(functions.pair, separator, parser)))
+    return app(functions.pair, parser, many0(app(functions.pair, separator, parser)))
 
 def sepBy0(parser, separator):
     '''
